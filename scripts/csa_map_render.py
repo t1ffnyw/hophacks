@@ -433,13 +433,13 @@ class _RegionFocusStyle(MacroElement):
                 stroke: {color};
                 stroke-width: {weight};
             }}
-            /* Semi-transparent popup shell + inner panel (both see-through). */
+            /* Transparent outer Leaflet shell; semi-opaque inner Folium panel. */
             .leaflet-popup-content-wrapper {{
-                background: {panel};
+                background: transparent;
                 color: #111827;
-                border: 1px solid {panel};
+                border: none;
                 border-radius: 3px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                box-shadow: none;
                 padding: 0;
             }}
             .leaflet-popup-content {{
@@ -464,6 +464,8 @@ class _RegionFocusStyle(MacroElement):
                 font-family: arial;
                 font-size: 12px;
                 padding: 8px;
+                border-radius: 3px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
             }}
             </style>
             {{% endmacro %}}
