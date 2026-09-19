@@ -168,6 +168,22 @@ class CsaMapRenderTests(unittest.TestCase):
         self.assertNotIn("_tooltip_value_income", rendered)
         self.assertNotIn("_tooltip_value_trees", rendered)
 
+    def test_map_popup_chrome_matches_tooltip_style(self):
+        rendered = build_csa_map(
+            self.gdf,
+            ["heat"],
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+            tile_url=None,
+            tile_attr=None,
+        ).get_root().render()
+
+        self.assertIn('"closeButton": false', rendered)
+        self.assertIn(".leaflet-popup-content-wrapper", rendered)
+        self.assertIn(".leaflet-popup-close-button", rendered)
+        self.assertIn("box-shadow: 0 1px 3px rgba(0,0,0,0.4)", rendered)
+        self.assertIn("border-radius: 3px", rendered)
+
     def test_embed_map_html_uses_fixed_height(self):
         self.assertEqual(MAP_EMBED_HEIGHT, "520px")
         map_widget = build_csa_map(

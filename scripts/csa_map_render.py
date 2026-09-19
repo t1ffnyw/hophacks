@@ -232,6 +232,7 @@ def _popup(specs: Mapping[str, LayerSpec]) -> folium.GeoJsonPopup:
         labels=True,
         localize=True,
         style=_TOOLTIP_STYLE,
+        closeButton=False,
     )
 
 
@@ -410,7 +411,7 @@ _REGION_HIGHLIGHT = {
 
 
 class _RegionFocusStyle(MacroElement):
-    """Replace the browser focus box with the same stroke used on hover."""
+    """Focus stroke + popup chrome styled like Leaflet tooltips."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -425,6 +426,38 @@ class _RegionFocusStyle(MacroElement):
                 outline: none;
                 stroke: {color};
                 stroke-width: {weight};
+            }}
+            /* Match Leaflet tooltip chrome so click cards look like hover tips. */
+            .leaflet-popup-content-wrapper {{
+                background: #fff;
+                color: #111827;
+                border: 1px solid #fff;
+                border-radius: 3px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                padding: 0;
+            }}
+            .leaflet-popup-content {{
+                margin: 0;
+                line-height: 1.35;
+                font: 12px/1.35 Arial, sans-serif;
+            }}
+            .leaflet-popup-tip {{
+                background: #fff;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                width: 12px;
+                height: 12px;
+                margin: -6px auto 0;
+                padding: 0;
+            }}
+            .leaflet-popup-close-button {{
+                display: none;
+            }}
+            .foliumpopup {{
+                background-color: white;
+                color: #111827;
+                font-family: arial;
+                font-size: 12px;
+                padding: 8px;
             }}
             </style>
             {{% endmacro %}}
