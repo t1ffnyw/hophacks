@@ -3,3 +3,8 @@ rasterio
 rasterstats
 pandas
 numpy
+marimo
+folium
+matplotlib
+mapclassify
+python-dotenv
