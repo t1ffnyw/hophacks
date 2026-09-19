@@ -8,7 +8,7 @@ from typing import Mapping, Sequence
 
 import folium
 import geopandas as gpd
-from branca.element import Element, MacroElement, Template
+from branca.element import Figure, MacroElement, Template
 
 from scripts.csa_map_data import (
     CATEGORY_ORDER,
@@ -19,6 +19,7 @@ from scripts.csa_map_data import (
 
 
 MISSING_COLOR = "#bdbdbd"
+MAP_EMBED_HEIGHT = "520px"
 SINGLE_PALETTES: dict[str, tuple[str, str, str]] = {
     "heat": ("#fee5d9", "#fb6a4a", "#a50f15"),
     "health": ("#efedf5", "#bcbddc", "#756bb1"),
@@ -188,7 +189,7 @@ def _tooltip(
     for key in selected_keys:
         spec = specs[key]
         fields.append(f"_tooltip_value_{key}")
-        aliases.append(f"{spec.label} ({spec.units}; {spec.period})")
+        aliases.append(spec.label)
         if len(selected_keys) == 2:
             fields.append(f"_tooltip_class_{key}")
             aliases.append(f"{spec.label} class")
@@ -229,14 +230,10 @@ def _single_legend(
         f"<div class='csa-legend-title'>{html_lib.escape(spec.label)}</div>"
         f"<div>{html_lib.escape(spec.units)}</div>"
         f"<div>{html_lib.escape(spec.period)}</div>"
-        "<div class='csa-legend-note'>Darker means a higher value; "
-        "this is not inherently better or worse.</div>"
+        "<div class='csa-legend-note'>Darker means a higher value.</div>"
         + "".join(rows)
         + caveat
-        + "<div class='csa-legend-row'>"
-        f"<span class='csa-swatch' style='background:{MISSING_COLOR}'></span>"
-        "<span><strong>Missing</strong>: no selected measurement</span>"
-        "</div></div>"
+        + "</div>"
     )
 
 
@@ -249,7 +246,13 @@ def _bivariate_legend(
     first_spec = specs[first]
     second_spec = specs[second]
     palette = PAIR_PALETTES[(first, second)]
-    grid_rows = []
+    column_headers = "".join(
+        f"<th class='csa-bivariate-col-label' scope='col'>{name}</th>"
+        for name in CLASS_ORDER
+    )
+    grid_rows = [
+        f"<tr><th scope='row'></th>{column_headers}</tr>",
+    ]
     for second_index in reversed(range(3)):
         cells = []
         for first_index in range(3):
@@ -267,7 +270,8 @@ def _bivariate_legend(
                 "></td>"
             )
         grid_rows.append(
-            f"<tr><th>{CLASS_ORDER[second_index]}</th>{''.join(cells)}</tr>"
+            f"<tr><th scope='row'>{CLASS_ORDER[second_index]}</th>"
+            f"{''.join(cells)}</tr>"
         )
     first_ranges = "; ".join(
         f"{name}: {_class_range(name, thresholds[first], first_spec)}"
@@ -287,14 +291,16 @@ def _bivariate_legend(
     )
     return (
         "<div class='csa-map-legend'>"
-        "<div class='csa-legend-title'>Bivariate choropleth</div>"
-        f"<div class='csa-axis-y'>{html_lib.escape(second_spec.label)} "
-        "Low → High</div>"
+        "<div class='csa-legend-title'>Combined categories: "
+        f"{html_lib.escape(first_spec.label)} × "
+        f"{html_lib.escape(second_spec.label)}</div>"
+        f"<div class='csa-axis-y-caption'>{html_lib.escape(second_spec.label)}"
+        " (Low → High, rows)</div>"
         "<table class='csa-bivariate-grid'><tbody>"
         + "".join(grid_rows)
         + "</tbody></table>"
-        f"<div class='csa-axis-x'>Low → High: "
-        f"{html_lib.escape(first_spec.label)}</div>"
+        f"<div class='csa-axis-x'>{html_lib.escape(first_spec.label)} "
+        "(Low → High, columns)</div>"
         f"<div class='csa-legend-note'><strong>{html_lib.escape(first_spec.label)}"
         f"</strong> ({html_lib.escape(first_spec.units)}; "
         f"{html_lib.escape(first_spec.period)}) — "
@@ -303,61 +309,36 @@ def _bivariate_legend(
         f"</strong> ({html_lib.escape(second_spec.units)}; "
         f"{html_lib.escape(second_spec.period)}) — "
         f"{html_lib.escape(second_ranges)}</div>"
-        "<div class='csa-legend-row'>"
-        f"<span class='csa-swatch' style='background:{MISSING_COLOR}'></span>"
-        "<span><strong>Missing</strong>: either selected measurement missing</span>"
-        "</div>"
         + caveat_html
         + "</div>"
     )
 
 
-def _add_legend(
-    map_widget: folium.Map,
-    selected_keys: tuple[str, ...],
+def build_legend_html(
+    selected_keys: Sequence[str],
     specs: Mapping[str, LayerSpec],
     thresholds: Mapping[str, TercileThresholds],
-) -> None:
-    if len(selected_keys) == 1:
+) -> str:
+    """Return standalone legend HTML for the notebook sidebar."""
+    selected = canonicalize_selection(selected_keys)
+    if len(selected) == 1:
         legend = _single_legend(
-            selected_keys[0],
-            specs[selected_keys[0]],
-            thresholds[selected_keys[0]],
+            selected[0],
+            specs[selected[0]],
+            thresholds[selected[0]],
         )
     else:
         legend = _bivariate_legend(
-            selected_keys[0],
-            selected_keys[1],
+            selected[0],
+            selected[1],
             specs,
             thresholds,
         )
     css = """
     <style>
-    html, body {
-        box-sizing: border-box;
-        height: 100%;
-        margin: 0;
-        width: 100%;
-    }
-    body {
-        align-items: stretch;
-        display: flex;
-        flex-direction: row;
-        gap: 12px;
-        padding: 8px;
-    }
-    .folium-map {
-        flex: 1 1 auto;
-        height: 100% !important;
-        min-width: 0;
-        order: 1;
-    }
     .csa-map-layout {
-        align-self: flex-start;
-        flex: 0 0 310px;
-        max-height: 100%;
-        order: 2;
-        overflow-y: auto;
+        max-width: none;
+        width: 100%;
     }
     .csa-map-legend {
         background: rgba(255, 255, 255, 0.96);
@@ -374,23 +355,20 @@ def _add_legend(
     .csa-swatch { border: 1px solid #6b7280; display: inline-block; flex: 0 0 auto;
         height: 14px; width: 22px; }
     .csa-bivariate-grid { border-collapse: collapse; margin: 5px auto 2px; }
-    .csa-bivariate-grid td { border: 1px solid #6b7280; height: 25px; width: 25px; }
+    .csa-bivariate-grid td { border: 1px solid #6b7280; height: 36px; width: 36px; }
     .csa-bivariate-grid th { font-weight: 600; padding: 2px 4px; }
-    .csa-axis-x { font-size: 11px; text-align: center; }
-    .csa-axis-y { font-size: 11px; margin-top: 4px; }
+    .csa-bivariate-col-label { font-size: 11px; text-align: center; }
+    .csa-axis-x { font-size: 11px; margin-top: 4px; text-align: center; }
+    .csa-axis-y-caption { font-size: 11px; font-weight: 600; margin-top: 4px; }
     @media (max-width: 640px) {
-        body { flex-direction: column; }
-        .folium-map { flex: 1 1 auto; height: 55vh !important; order: 1; }
-        .csa-map-layout { flex: 0 0 auto; max-width: none; order: 2; width: 100%; }
+        .csa-map-layout { max-width: none; }
         .csa-map-legend { font-size: 10px; padding: 6px; }
         .csa-legend-title { font-size: 12px; }
         .csa-legend-note { font-size: 9px; }
     }
     </style>
     """
-    map_widget.get_root().html.add_child(
-        Element(css + f"<div class='csa-map-layout'>{legend}</div>")
-    )
+    return css + f"<div class='csa-map-layout'>{legend}</div>"
 
 
 class _ResetToBaltimore(MacroElement):
@@ -474,5 +452,14 @@ def build_csa_map(
     ).add_to(map_widget)
     map_widget.fit_bounds(bounds)
     map_widget.add_child(_ResetToBaltimore(bounds))
-    _add_legend(map_widget, selected, specs, thresholds)
     return map_widget
+
+
+def embed_map_html(
+    map_widget: folium.Map,
+    height: str = MAP_EMBED_HEIGHT,
+) -> str:
+    """Embed a Folium map in a fixed-height iframe for stable notebook layout."""
+    figure = Figure(width="100%", height=height)
+    figure.add_child(map_widget)
+    return figure._repr_html_()
