@@ -81,6 +81,33 @@ class CsaMapRenderTests(unittest.TestCase):
         self.assertIn("Darker means a higher value", rendered)
         self.assertIn("≤ $", rendered)
 
+    def test_legend_layout_places_card_beside_map(self):
+        rendered = build_csa_map(
+            self.gdf,
+            ["heat"],
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+            tile_url=None,
+            tile_attr=None,
+        ).get_root().render()
+
+        self.assertIn("csa-map-layout", rendered)
+        self.assertIn("flex-direction: row", rendered)
+        self.assertIn("csa-map-legend", rendered)
+
+    def test_map_limits_minimum_zoom(self):
+        map_widget = build_csa_map(
+            self.gdf,
+            ["heat"],
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+            tile_url=None,
+            tile_attr=None,
+        )
+
+        self.assertEqual(map_widget.options["minZoom"], 10)
+        self.assertIn('"minZoom": 10', map_widget.get_root().render())
+
     def test_bivariate_legend_contains_axes_and_numeric_ranges(self):
         rendered = build_csa_map(
             self.gdf,

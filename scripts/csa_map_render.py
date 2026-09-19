@@ -333,6 +333,32 @@ def _add_legend(
         )
     css = """
     <style>
+    html, body {
+        box-sizing: border-box;
+        height: 100%;
+        margin: 0;
+        width: 100%;
+    }
+    body {
+        align-items: stretch;
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        padding: 8px;
+    }
+    .folium-map {
+        flex: 1 1 auto;
+        height: 100% !important;
+        min-width: 0;
+        order: 1;
+    }
+    .csa-map-layout {
+        align-self: flex-start;
+        flex: 0 0 310px;
+        max-height: 100%;
+        order: 2;
+        overflow-y: auto;
+    }
     .csa-map-legend {
         background: rgba(255, 255, 255, 0.96);
         border: 1px solid #9ca3af;
@@ -340,9 +366,6 @@ def _add_legend(
         box-shadow: 0 1px 5px rgba(0,0,0,.35);
         color: #111827;
         font: 12px/1.35 Arial, sans-serif;
-        max-height: 60vh;
-        max-width: 310px;
-        overflow-y: auto;
         padding: 10px;
     }
     .csa-legend-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
@@ -356,13 +379,18 @@ def _add_legend(
     .csa-axis-x { font-size: 11px; text-align: center; }
     .csa-axis-y { font-size: 11px; margin-top: 4px; }
     @media (max-width: 640px) {
-        .csa-map-legend { font-size: 10px; max-width: 230px; padding: 6px; }
+        body { flex-direction: column; }
+        .folium-map { flex: 1 1 auto; height: 55vh !important; order: 1; }
+        .csa-map-layout { flex: 0 0 auto; max-width: none; order: 2; width: 100%; }
+        .csa-map-legend { font-size: 10px; padding: 6px; }
         .csa-legend-title { font-size: 12px; }
         .csa-legend-note { font-size: 9px; }
     }
     </style>
     """
-    map_widget.get_root().html.add_child(Element(css + legend))
+    map_widget.get_root().html.add_child(
+        Element(css + f"<div class='csa-map-layout'>{legend}</div>")
+    )
 
 
 class _ResetToBaltimore(MacroElement):
@@ -421,6 +449,8 @@ def build_csa_map(
     map_kwargs = {
         "location": center,
         "zoom_start": 11,
+        "min_zoom": 10,
+        "minZoom": 10,
         "control_scale": True,
         "zoom_control": True,
         "tiles": None,

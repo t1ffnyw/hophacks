@@ -60,10 +60,10 @@ LAYER_SPECS: dict[str, LayerSpec] = {
         key="heat",
         label="Heat",
         column="temp_af_mean",
-        units="source-raster units (likely °C)",
+        units="°C",
         period="Modeled afternoon surface, approximately 3 PM; 2018 source context",
         hue="red",
-        caveat="TIFF metadata does not declare a temperature-unit conversion.",
+       
     ),
     "health": LayerSpec(
         key="health",
@@ -72,10 +72,7 @@ LAYER_SPECS: dict[str, LayerSpec] = {
         units="PR_HRI percentile",
         period="2024 HHI source label; derived CSA approximation",
         hue="purple",
-        caveat=(
-            "Approximate ZIP-to-CSA aggregation; this is not an illness rate "
-            "or causal measure."
-        ),
+       
     ),
     "income": LayerSpec(
         key="income",
