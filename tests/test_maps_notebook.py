@@ -15,6 +15,8 @@ class MapsNotebookTests(unittest.TestCase):
             definitions["category_selector"]._args.args["max-selections"],
             2,
         )
+        self.assertEqual(definitions["vulnerability_tree_keys"], ("health", "trees"))
+        self.assertIsNotNone(definitions["whatif_explorer"])
 
 
 if __name__ == "__main__":

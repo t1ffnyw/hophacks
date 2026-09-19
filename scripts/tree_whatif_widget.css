@@ -1,0 +1,268 @@
+@import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+
+.whatif-root {
+  box-sizing: border-box;
+  color: #111827;
+  font: 14px/1.4 Arial, sans-serif;
+  width: 100%;
+}
+
+.whatif-root *,
+.whatif-root *::before,
+.whatif-root *::after {
+  box-sizing: border-box;
+}
+
+.whatif-map-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  height: 520px;
+  min-height: 520px;
+}
+
+.whatif-map-frame {
+  flex: 1 1 auto;
+  height: 520px;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.whatif-map {
+  height: 100%;
+  width: 100%;
+}
+
+.whatif-map .leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.whatif-legend {
+  align-self: stretch;
+  display: flex;
+  flex: 0 0 310px;
+  flex-direction: column;
+  gap: 10px;
+  height: 520px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.whatif-scatter-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+  color: #111827;
+  font: 12px/1.35 Arial, sans-serif;
+  padding: 10px;
+}
+
+.whatif-scatter-stats {
+  color: #374151;
+  font-size: 11px;
+  margin: 2px 0 4px;
+}
+
+.whatif-scatter-point {
+  fill: #756bb1;
+  fill-opacity: 0.75;
+  stroke: #4c1d95;
+  stroke-width: 0.6;
+}
+
+.whatif-scatter-point.is-selected {
+  fill: #238b45;
+  fill-opacity: 1;
+  stroke: #14532d;
+  stroke-width: 1.2;
+}
+
+.whatif-scatter-point.is-projected {
+  fill: #f59e0b;
+  fill-opacity: 1;
+  stroke: #92400e;
+  stroke-width: 1.2;
+}
+
+.whatif-reg-line {
+  stroke: #111827;
+  stroke-width: 1.8;
+}
+
+.whatif-axis-label,
+.whatif-scatter svg text {
+  fill: #374151;
+  font: 10px Arial, sans-serif;
+}
+
+.csa-map-legend {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+  color: #111827;
+  font: 12px/1.35 Arial, sans-serif;
+  padding: 10px;
+}
+
+.csa-legend-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.csa-legend-row {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.csa-legend-note {
+  color: #374151;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.csa-swatch {
+  border: 1px solid #6b7280;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 14px;
+  width: 22px;
+}
+
+.csa-bivariate-grid {
+  border-collapse: collapse;
+  margin: 5px auto 2px;
+}
+
+.csa-bivariate-grid td {
+  border: 1px solid #6b7280;
+  height: 25px;
+  width: 25px;
+}
+
+.csa-bivariate-grid th {
+  font-weight: 600;
+  padding: 2px 4px;
+}
+
+.csa-axis-x {
+  font-size: 11px;
+  text-align: center;
+}
+
+.csa-axis-y {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.whatif-reset {
+  background: #fff;
+  border: 0;
+  cursor: pointer;
+  font: 12px Arial, sans-serif;
+  padding: 5px 7px;
+  white-space: nowrap;
+}
+
+.whatif-controls {
+  align-items: stretch;
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.whatif-slider-col {
+  display: flex;
+  flex: 1 1 48%;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.whatif-slider-wrap {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.whatif-slider-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-bottom: 22px;
+  position: relative;
+}
+
+.whatif-slider-track input[type="range"] {
+  accent-color: #238b45;
+  display: block;
+  margin: 0;
+  width: 100%;
+}
+
+.whatif-slider-value {
+  bottom: 0;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+  left: 50%;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.whatif-end-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.whatif-impact {
+  background: #f8fafc;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  flex: 1 1 52%;
+  padding: 12px 14px;
+}
+
+.whatif-impact h3 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+
+.whatif-impact p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .whatif-map-row,
+  .whatif-controls {
+    flex-direction: column;
+  }
+
+  .whatif-map-row {
+    height: auto;
+    min-height: 0;
+  }
+
+  .whatif-map-frame {
+    height: 55vh;
+  }
+
+  .whatif-legend {
+    flex: 0 0 auto;
+    height: auto;
+    max-height: none;
+    width: 100%;
+  }
+}

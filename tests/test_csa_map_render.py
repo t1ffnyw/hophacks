@@ -39,6 +39,15 @@ class CsaMapRenderTests(unittest.TestCase):
             self.assertEqual(len(palette), 3)
             self.assertTrue(all(len(row) == 3 for row in palette))
 
+    def test_health_trees_pair_uses_single_map_purple_and_green(self):
+        palette = PAIR_PALETTES[("health", "trees")]
+        # Low tree canopy row follows the heat-health purple ramp from map 1.
+        self.assertEqual(palette[0][1], SINGLE_PALETTES["health"][1])
+        self.assertEqual(palette[0][2], SINGLE_PALETTES["health"][2])
+        # Low vulnerability column follows the tree canopy green ramp from map 1.
+        self.assertEqual(palette[1][0], SINGLE_PALETTES["trees"][1])
+        self.assertEqual(palette[2][0], SINGLE_PALETTES["trees"][2])
+
     def test_renders_all_single_and_pair_modes(self):
         for key in SINGLE_PALETTES:
             rendered = build_csa_map(

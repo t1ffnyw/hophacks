@@ -26,6 +26,54 @@ SINGLE_PALETTES: dict[str, tuple[str, str, str]] = {
     "trees": ("#e5f5e0", "#a1d99b", "#238b45"),
 }
 
+
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    value = color.lstrip("#")
+    return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+
+
+def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def _blend_hex(first: str, second: str, weight: float = 0.5) -> str:
+    weight = min(1.0, max(0.0, weight))
+    r1, g1, b1 = _hex_to_rgb(first)
+    r2, g2, b2 = _hex_to_rgb(second)
+    return _rgb_to_hex(
+        (
+            round(r1 * (1.0 - weight) + r2 * weight),
+            round(g1 * (1.0 - weight) + g2 * weight),
+            round(b1 * (1.0 - weight) + b2 * weight),
+        )
+    )
+
+
+def _pair_palette_from_singles(
+    first: str, second: str
+) -> tuple[tuple[str, str, str], ...]:
+    """Build a bivariate grid from the same univariate colors as single maps."""
+    first_colors = SINGLE_PALETTES[first]
+    second_colors = SINGLE_PALETTES[second]
+    rows: list[tuple[str, str, str]] = []
+    for second_index in range(3):
+        row: list[str] = []
+        for first_index in range(3):
+            total = first_index + second_index
+            # Keep the Low-tree row on the health purple ramp and the
+            # Low-health column on the tree green ramp so colors match map 1.
+            weight = 0.5 if total == 0 else second_index / total
+            row.append(
+                _blend_hex(
+                    first_colors[first_index],
+                    second_colors[second_index],
+                    weight,
+                )
+            )
+        rows.append((row[0], row[1], row[2]))
+    return (rows[0], rows[1], rows[2])
+
+
 # Rows run from the second category's Low to High; columns run from the
 # first category's Low to High. Each pair is intentionally explicit so that
 # the visual meaning is stable across runs and does not depend on alpha layers.
@@ -65,11 +113,7 @@ PAIR_PALETTES: dict[tuple[str, str], tuple[tuple[str, str, str], ...]] = {
     (
         "health",
         "trees",
-    ): (
-        ("#f3f4f6", "#d2e6cf", "#93c69a"),
-        ("#ddd2e7", "#c2b6c9", "#888d91"),
-        ("#b598cb", "#987fa2", "#5f5971"),
-    ),
+    ): _pair_palette_from_singles("health", "trees"),
     (
         "income",
         "trees",
@@ -312,25 +356,43 @@ def _bivariate_legend(
     )
 
 
+def build_legend_html(
+    selected_keys: Sequence[str],
+    specs: Mapping[str, LayerSpec],
+    thresholds: Mapping[str, TercileThresholds],
+) -> str:
+    """Return the HTML card used beside a one- or two-category choropleth."""
+    selected = canonicalize_selection(selected_keys)
+    if len(selected) == 1:
+        return _single_legend(
+            selected[0],
+            specs[selected[0]],
+            thresholds[selected[0]],
+        )
+    return _bivariate_legend(
+        selected[0],
+        selected[1],
+        specs,
+        thresholds,
+    )
+
+
+def fill_color_for_properties(
+    selected_keys: Sequence[str],
+    properties: Mapping[str, object],
+) -> str:
+    """Return the choropleth fill color for one GeoJSON feature."""
+    selected = canonicalize_selection(selected_keys)
+    return str(_style_function(selected)({"properties": dict(properties)})["fillColor"])
+
+
 def _add_legend(
     map_widget: folium.Map,
     selected_keys: tuple[str, ...],
     specs: Mapping[str, LayerSpec],
     thresholds: Mapping[str, TercileThresholds],
 ) -> None:
-    if len(selected_keys) == 1:
-        legend = _single_legend(
-            selected_keys[0],
-            specs[selected_keys[0]],
-            thresholds[selected_keys[0]],
-        )
-    else:
-        legend = _bivariate_legend(
-            selected_keys[0],
-            selected_keys[1],
-            specs,
-            thresholds,
-        )
+    legend = build_legend_html(selected_keys, specs, thresholds)
     css = """
     <style>
     html, body {

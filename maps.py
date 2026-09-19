@@ -15,11 +15,17 @@ def _():
 
     data_module = import_module("scripts.csa_map_data")
     render_module = import_module("scripts.csa_map_render")
+    whatif_model = import_module("data.what_if_regression")
+    whatif_widget = import_module("scripts.tree_whatif_widget")
     CATEGORY_ORDER = data_module.CATEGORY_ORDER
     LAYER_SPECS = data_module.LAYER_SPECS
     load_csa_map_data = data_module.load_csa_map_data
     build_csa_map = render_module.build_csa_map
     canonicalize_selection = render_module.canonicalize_selection
+    csa_whatif_stats = whatif_model.csa_whatif_stats
+    regression_scatter_payload = whatif_model.regression_scatter_payload
+    tree_illness_slope = whatif_model.tree_illness_slope
+    build_whatif_widget = whatif_widget.build_whatif_widget
 
     _ = load_dotenv(Path(__file__).resolve().parent / ".env")
     return (
@@ -27,10 +33,14 @@ def _():
         LAYER_SPECS,
         Path,
         build_csa_map,
+        build_whatif_widget,
         canonicalize_selection,
+        csa_whatif_stats,
         load_csa_map_data,
         mo,
         os,
+        regression_scatter_payload,
+        tree_illness_slope,
     )
 
 
@@ -147,6 +157,51 @@ def _(
         output = map_output
     output
     return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ## Heat-health vulnerability and tree cover
+
+    This map always shows heat-health vulnerability with tree cover.
+    Click a Community Statistical Area, then use the tree slider to
+    explore a modeled change in heat-health vulnerability.
+    """)
+    return
+
+
+@app.cell
+def _(
+    LAYER_SPECS,
+    build_whatif_widget,
+    csa_gdf,
+    csa_whatif_stats,
+    diagnostics,
+    mo,
+    regression_scatter_payload,
+    tile_attr,
+    tile_url,
+    tree_illness_slope,
+):
+    vulnerability_tree_keys = ("health", "trees")
+    whatif_slope = tree_illness_slope(csa_gdf)
+    whatif_stats = csa_whatif_stats(csa_gdf)
+    whatif_scatter = regression_scatter_payload(csa_gdf)
+    whatif_explorer = mo.ui.anywidget(
+        build_whatif_widget(
+            csa_gdf,
+            LAYER_SPECS,
+            diagnostics.thresholds,
+            whatif_slope,
+            whatif_stats,
+            tile_url,
+            tile_attr,
+            scatter_payload=whatif_scatter,
+        )
+    )
+    whatif_explorer
+    return whatif_explorer, vulnerability_tree_keys
 
 
 if __name__ == "__main__":
