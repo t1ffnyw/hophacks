@@ -1,0 +1,44 @@
+// Satellite: Sentinel-2
+// Search area: [-76.7604, 39.1905,-76.4274, 39.429]
+//Capture date: "2018-Jul-10" - "2018-Jul-11"
+
+// Google Earth Engine Code:
+///////////////////////////////////////////////////////////////////////
+
+// Code Start
+
+var sent = ee.ImageCollection("COPERNICUS/S2"),
+    imageVisParam = {"opacity":1,"bands":["B4","B3","B2"],"min":200,"max":3000,"gamma":1}
+
+var bal = ee.Geometry.Rectangle([-76.7604, 39.1905,-76.4274, 39.429]); // put in values from 'inspector' tab
+
+var sentVis = {"opacity":1,"bands":["B4","B3","B2"],"min":200,"max":3000,"gamma":1};
+
+var balImage = ee.Image(sent.filterDate("2018-07-10").filterBounds(bal).median()); //Very good!
+
+Map.addLayer(balImage,imageVisParam);
+
+var bal_10 = balImage.select('B2','B3','B4','B8');
+var bal_20 = balImage.select('B5','B6','B7','B8A','B11','B12');
+
+Export.image.toDrive({
+  image: bal_10,
+  description: 'bal_10',
+  scale: 10,
+  crs: 'EPSG:32618',
+  maxPixels: 509000000 ,
+  region: bal
+});
+
+Export.image.toDrive({
+  image: bal_20,
+  description: 'bal_20',
+  scale: 20,
+  crs: 'EPSG:32618',
+  maxPixels: 509000000,
+  region: bal
+});
+
+//Map.addLayer(bal);
+
+// Code Stop
