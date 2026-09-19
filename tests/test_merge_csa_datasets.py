@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from scripts.merge_csa_datasets import merge_attribute_tables
+from data.merge_csa_datasets import merge_attribute_tables
 
 
 class MergeAttributeTablesTests(unittest.TestCase):
