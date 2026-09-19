@@ -125,6 +125,49 @@ class CsaMapRenderTests(unittest.TestCase):
         self.assertEqual(map_widget.options["minZoom"], 10)
         self.assertIn('"minZoom": 10', map_widget.get_root().render())
 
+    def test_map_suppresses_browser_focus_box_on_region_click(self):
+        rendered = build_csa_map(
+            self.gdf,
+            ["heat"],
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+            tile_url=None,
+            tile_attr=None,
+        ).get_root().render()
+
+        self.assertIn("path.leaflet-interactive:focus", rendered)
+        self.assertIn("outline: none", rendered)
+        self.assertIn("stroke: #111827", rendered)
+        self.assertIn("stroke-width: 2.5", rendered)
+
+    def test_map_popup_lists_all_four_metrics_while_tooltip_stays_scoped(self):
+        rendered = build_csa_map(
+            self.gdf,
+            ["heat"],
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+            tile_url=None,
+            tile_attr=None,
+        ).get_root().render()
+
+        self.assertIn("bindPopup", rendered)
+        self.assertIn("_popup_value_heat", rendered)
+        self.assertIn("_popup_value_health", rendered)
+        self.assertIn("_popup_value_income", rendered)
+        self.assertIn("_popup_value_trees", rendered)
+        for label in (
+            "Heat",
+            "Heat-health vulnerability",
+            "Median household income",
+            "Tree canopy coverage",
+        ):
+            self.assertIn(label, rendered)
+
+        self.assertIn("_tooltip_value_heat", rendered)
+        self.assertNotIn("_tooltip_value_health", rendered)
+        self.assertNotIn("_tooltip_value_income", rendered)
+        self.assertNotIn("_tooltip_value_trees", rendered)
+
     def test_embed_map_html_uses_fixed_height(self):
         self.assertEqual(MAP_EMBED_HEIGHT, "520px")
         map_widget = build_csa_map(

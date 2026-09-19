@@ -20,6 +20,10 @@ from scripts.csa_map_data import (
 
 MISSING_COLOR = "#bdbdbd"
 MAP_EMBED_HEIGHT = "520px"
+_TOOLTIP_STYLE = (
+    "background-color: white; color: #111827; "
+    "font-family: arial; font-size: 12px; padding: 8px;"
+)
 SINGLE_PALETTES: dict[str, tuple[str, str, str]] = {
     "heat": ("#fee5d9", "#fb6a4a", "#a50f15"),
     "health": ("#efedf5", "#bcbddc", "#756bb1"),
@@ -144,10 +148,23 @@ def _prepare_tooltip_columns(
         value_field = f"_tooltip_value_{key}"
         class_field = f"_tooltip_class_{key}"
         prepared[value_field] = prepared[spec.column].map(
-            lambda value: _format_measurement(value, spec)
+            lambda value, s=spec: _format_measurement(value, s)
         )
         prepared[class_field] = (
             prepared[f"{key}_class"].fillna("Missing").astype(str)
+        )
+    return prepared
+
+
+def _prepare_popup_columns(
+    gdf: gpd.GeoDataFrame,
+    specs: Mapping[str, LayerSpec],
+) -> gpd.GeoDataFrame:
+    prepared = gdf.copy()
+    for key in CATEGORY_ORDER:
+        spec = specs[key]
+        prepared[f"_popup_value_{key}"] = prepared[spec.column].map(
+            lambda value, s=spec: _format_measurement(value, s)
         )
     return prepared
 
@@ -199,10 +216,22 @@ def _tooltip(
         labels=True,
         sticky=False,
         localize=True,
-        style=(
-            "background-color: white; color: #111827; "
-            "font-family: arial; font-size: 12px; padding: 8px;"
-        ),
+        style=_TOOLTIP_STYLE,
+    )
+
+
+def _popup(specs: Mapping[str, LayerSpec]) -> folium.GeoJsonPopup:
+    fields = ["Community"]
+    aliases = ["CSA"]
+    for key in CATEGORY_ORDER:
+        fields.append(f"_popup_value_{key}")
+        aliases.append(specs[key].label)
+    return folium.GeoJsonPopup(
+        fields=fields,
+        aliases=aliases,
+        labels=True,
+        localize=True,
+        style=_TOOLTIP_STYLE,
     )
 
 
@@ -371,6 +400,38 @@ def build_legend_html(
     return css + f"<div class='csa-map-layout'>{legend}</div>"
 
 
+# Match highlight_function so click/keyboard focus outlines the region path
+# instead of Chrome's rectangular SVG focus ring around the feature bounds.
+_REGION_HIGHLIGHT = {
+    "color": "#111827",
+    "fillOpacity": 1.0,
+    "weight": 2.5,
+}
+
+
+class _RegionFocusStyle(MacroElement):
+    """Replace the browser focus box with the same stroke used on hover."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._name = "RegionFocusStyle"
+        color = _REGION_HIGHLIGHT["color"]
+        weight = _REGION_HIGHLIGHT["weight"]
+        self._template = Template(
+            f"""
+            {{% macro header(this, kwargs) %}}
+            <style>
+            .leaflet-container path.leaflet-interactive:focus {{
+                outline: none;
+                stroke: {color};
+                stroke-width: {weight};
+            }}
+            </style>
+            {{% endmacro %}}
+            """
+        )
+
+
 class _ResetToBaltimore(MacroElement):
     """A small Leaflet control that returns to the initial CSA bounds."""
 
@@ -418,6 +479,7 @@ def build_csa_map(
     """Build one opaque GeoJson map for one or two selected categories."""
     selected = canonicalize_selection(selected_keys)
     render_gdf = _prepare_tooltip_columns(gdf, selected, specs)
+    render_gdf = _prepare_popup_columns(render_gdf, specs)
     if render_gdf.crs is not None and render_gdf.crs.to_epsg() != 4326:
         render_gdf = render_gdf.to_crs("EPSG:4326")
 
@@ -442,18 +504,15 @@ def build_csa_map(
         data=render_gdf.to_json(drop_id=True),
         name="Baltimore CSA choropleth",
         style_function=_style_function(selected),
-        highlight_function=lambda feature: {
-            "color": "#111827",
-            "fillOpacity": 1.0,
-            "weight": 2.5,
-        },
+        highlight_function=lambda feature: dict(_REGION_HIGHLIGHT),
         tooltip=_tooltip(selected, specs),
+        popup=_popup(specs),
         show=True,
     ).add_to(map_widget)
     map_widget.fit_bounds(bounds)
+    map_widget.add_child(_RegionFocusStyle())
     map_widget.add_child(_ResetToBaltimore(bounds))
     return map_widget
-
 
 def embed_map_html(
     map_widget: folium.Map,
