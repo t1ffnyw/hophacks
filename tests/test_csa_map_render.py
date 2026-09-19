@@ -13,6 +13,7 @@ from scripts.csa_map_render import (
     build_csa_map,
     build_legend_html,
     canonicalize_selection,
+    comparison_label,
     embed_map_html,
     format_bivariate_bin_detail,
 )
@@ -82,8 +83,14 @@ class CsaMapRenderTests(unittest.TestCase):
             )
             self.assertIn("Low", legend)
             self.assertIn("High", legend)
-            self.assertIn(self.diagnostics.layer_specs[first].label, legend)
-            self.assertIn(self.diagnostics.layer_specs[second].label, legend)
+            self.assertIn(
+                comparison_label(first, self.diagnostics.layer_specs),
+                legend,
+            )
+            self.assertIn(
+                comparison_label(second, self.diagnostics.layer_specs),
+                legend,
+            )
 
     def test_single_legend_contains_units_period_and_thresholds(self):
         legend = build_legend_html(
@@ -93,9 +100,26 @@ class CsaMapRenderTests(unittest.TestCase):
         )
 
         self.assertIn("USD", legend)
-        self.assertIn("2023 income year", legend)
-        self.assertIn("Darker means a higher value", legend)
+        self.assertIn("csa-legend-units", legend)
         self.assertIn("≤ $", legend)
+        self.assertIn("font-size: 18px", legend)
+        self.assertNotIn("2023 income year", legend)
+        self.assertNotIn("Darker means a higher value", legend)
+
+    def test_single_legend_unit_descriptions(self):
+        cases = {
+            "heat": "Degrees Celsius",
+            "health": "Heat-health risk index (percentile)",
+            "income": "USD",
+            "trees": "Percent of neighborhood area",
+        }
+        for key, description in cases.items():
+            legend = build_legend_html(
+                (key,),
+                self.diagnostics.layer_specs,
+                self.diagnostics.thresholds,
+            )
+            self.assertIn(description, legend)
 
     def test_legend_html_includes_sidebar_styles(self):
         legend = build_legend_html(
@@ -158,9 +182,9 @@ class CsaMapRenderTests(unittest.TestCase):
         self.assertIn("_popup_value_trees", rendered)
         for label in (
             "Heat",
-            "Heat-health vulnerability",
-            "Median household income",
-            "Tree canopy coverage",
+            "Heat-Health Vulnerability",
+            "Median Household Income",
+            "Tree Canopy Coverage",
         ):
             self.assertIn(label, rendered)
 
@@ -239,18 +263,13 @@ class CsaMapRenderTests(unittest.TestCase):
 
     def test_bivariate_legend_title_and_grid_size(self):
         first, second = "heat", "income"
-        first_label = self.diagnostics.layer_specs[first].label
-        second_label = self.diagnostics.layer_specs[second].label
         legend = build_legend_html(
             (first, second),
             self.diagnostics.layer_specs,
             self.diagnostics.thresholds,
         )
 
-        self.assertIn(
-            f"Combined categories: {first_label} × {second_label}",
-            legend,
-        )
+        self.assertIn("Heat × Household Income", legend)
         self.assertNotIn("Bivariate choropleth", legend)
         self.assertIn("height: 48px", legend)
         self.assertIn("width: 48px", legend)
@@ -261,11 +280,10 @@ class CsaMapRenderTests(unittest.TestCase):
             self.diagnostics.layer_specs,
             self.diagnostics.thresholds,
         )
-        second_label = self.diagnostics.layer_specs["income"].label
         for class_name in ("Low", "Medium", "High"):
             self.assertIn(f"<th scope='row'>{class_name}</th>", legend)
         self.assertIn("csa-axis-y-label", legend)
-        self.assertIn(second_label, legend)
+        self.assertIn("Household Income", legend)
 
     def test_bivariate_legend_has_bottom_column_labels(self):
         legend = build_legend_html(
@@ -273,14 +291,13 @@ class CsaMapRenderTests(unittest.TestCase):
             self.diagnostics.layer_specs,
             self.diagnostics.thresholds,
         )
-        first_label = self.diagnostics.layer_specs["heat"].label
         for class_name in ("Low", "Medium", "High"):
             self.assertIn(
                 f"<td class='csa-bivariate-col-label'>{class_name}</td>",
                 legend,
             )
         self.assertIn("csa-axis-x-label", legend)
-        self.assertIn(first_label, legend)
+        self.assertIn("Heat", legend)
 
     def test_bivariate_legend_column_labels_after_grid_rows(self):
         legend = build_legend_html(
@@ -315,7 +332,8 @@ class CsaMapRenderTests(unittest.TestCase):
             self.diagnostics.thresholds,
         )
         self.assertIn("Heat", legend)
-        self.assertIn("Median household income", legend)
+        self.assertIn("Household Income", legend)
+        self.assertNotIn("Median Household Income", legend)
 
     def test_format_bivariate_bin_detail(self):
         detail = format_bivariate_bin_detail(
@@ -328,10 +346,21 @@ class CsaMapRenderTests(unittest.TestCase):
         )
         self.assertIn("Heat", detail)
         self.assertIn("Low", detail)
-        self.assertIn("Median household income", detail)
+        self.assertIn("Household Income", detail)
         self.assertIn("High", detail)
         self.assertIn("≤", detail)
         self.assertIn(">", detail)
+
+    def test_bivariate_short_labels_for_trees(self):
+        legend = build_legend_html(
+            ("income", "trees"),
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+        )
+        self.assertIn("Household Income", legend)
+        self.assertIn("Tree Canopy", legend)
+        self.assertNotIn("Tree Canopy Coverage", legend)
+        self.assertNotIn("Median Household Income", legend)
 
     def test_missing_values_use_neutral_opaque_styling(self):
         missing_gdf = self.gdf.copy()

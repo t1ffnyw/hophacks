@@ -84,6 +84,7 @@ def _():
     build_csa_map = render_module.build_csa_map
     build_legend_html = render_module.build_legend_html
     canonicalize_selection = render_module.canonicalize_selection
+    comparison_label = render_module.comparison_label
     embed_map_html = render_module.embed_map_html
     format_bivariate_bin_detail = render_module.format_bivariate_bin_detail
 
@@ -98,6 +99,7 @@ def _():
         build_csa_map,
         build_legend_html,
         canonicalize_selection,
+        comparison_label,
         embed_map_html,
         format_bivariate_bin_detail,
         load_csa_map_data,
@@ -258,6 +260,7 @@ def _(
     build_legend_html,
     canonicalize_selection,
     category_checks,
+    comparison_label,
     csa_gdf,
     diagnostics,
     embed_map_html,
@@ -329,8 +332,8 @@ def _(
                     on_click=_make_handler(),
                     full_width=True,
                     tooltip=(
-                        f"{LAYER_SPECS[first].label}: {first_class}; "
-                        f"{LAYER_SPECS[second].label}: {second_class}"
+                        f"{comparison_label(first, LAYER_SPECS)}: {first_class}; "
+                        f"{comparison_label(second, LAYER_SPECS)}: {second_class}"
                     ),
                 ).style(
                     {
@@ -383,7 +386,7 @@ def _(
             f"writing-mode:vertical-rl;text-orientation:mixed;"
             f"transform:rotate(180deg);display:flex;align-items:center;"
             f"justify-content:center;padding-right:6px'>"
-            f"{LAYER_SPECS[second].label}</div>"
+            f"{comparison_label(second, LAYER_SPECS)}</div>"
         )
 
         col_label_cells = [
@@ -401,7 +404,7 @@ def _(
             f"<div style='width:{cell_px * 3}px;text-align:center;"
             f"font-size:{label_font_px}px;font-weight:600;margin-top:4px;"
             f"box-sizing:border-box'>"
-            f"{LAYER_SPECS[first].label}</div>"
+            f"{comparison_label(first, LAYER_SPECS)}</div>"
         )
 
         # Keep Low/Med/High and the x-axis title under the color grid only,
@@ -421,8 +424,8 @@ def _(
         legend_title = mo.Html(
             "<div style='text-align:center'>"
             "<div style='font-size:16px;font-weight:700;line-height:1.3'>"
-            f"{LAYER_SPECS[first].label} × "
-            f"{LAYER_SPECS[second].label}</div>"
+            f"{comparison_label(first, LAYER_SPECS)} × "
+            f"{comparison_label(second, LAYER_SPECS)}</div>"
             "<div style='font-size:12px;font-weight:400;color:#4b5563;"
             "margin-top:2px;margin-bottom:12px;line-height:1.3'>"
             "Click a square for more info</div>"

@@ -244,6 +244,28 @@ def _popup(specs: Mapping[str, LayerSpec]) -> folium.GeoJsonPopup:
     )
 
 
+# Plain-language unit lines shown under single-category legend titles.
+LEGEND_UNIT_DESCRIPTIONS: dict[str, str] = {
+    "heat": "Degrees Celsius",
+    "health": "Heat-health risk index (percentile)",
+    "income": "USD",
+    "trees": "Percent of neighborhood area",
+}
+
+# Shorter names for bivariate comparison titles and axes.
+LEGEND_COMPARISON_LABELS: dict[str, str] = {
+    "heat": "Heat",
+    "health": "Heat-Health Vulnerability",
+    "income": "Household Income",
+    "trees": "Tree Canopy",
+}
+
+
+def comparison_label(key: str, specs: Mapping[str, LayerSpec]) -> str:
+    """Return the short display label used in two-category legends."""
+    return LEGEND_COMPARISON_LABELS.get(key, specs[key].label)
+
+
 def _single_legend(
     key: str,
     spec: LayerSpec,
@@ -263,12 +285,11 @@ def _single_legend(
         if spec.caveat
         else ""
     )
+    unit_description = LEGEND_UNIT_DESCRIPTIONS.get(key, spec.units)
     return (
         "<div class='csa-map-legend'>"
         f"<div class='csa-legend-title'>{html_lib.escape(spec.label)}</div>"
-        f"<div>{html_lib.escape(spec.units)}</div>"
-        f"<div>{html_lib.escape(spec.period)}</div>"
-        "<div class='csa-legend-note'>Darker means a higher value.</div>"
+        f"<div class='csa-legend-units'>{html_lib.escape(unit_description)}</div>"
         + "".join(rows)
         + caveat
         + "</div>"
@@ -288,11 +309,13 @@ def format_bivariate_bin_detail(
     second_spec = specs[second]
     first_range = _class_range(first_class, thresholds[first], first_spec)
     second_range = _class_range(second_class, thresholds[second], second_spec)
+    first_name = comparison_label(first, specs)
+    second_name = comparison_label(second, specs)
     return (
         "<div class='csa-bin-detail'>"
-        f"<div><strong>{html_lib.escape(first_spec.label)}</strong>: "
+        f"<div><strong>{html_lib.escape(first_name)}</strong>: "
         f"{html_lib.escape(first_class)} ({html_lib.escape(first_range)})</div>"
-        f"<div><strong>{html_lib.escape(second_spec.label)}</strong>: "
+        f"<div><strong>{html_lib.escape(second_name)}</strong>: "
         f"{html_lib.escape(second_class)} ({html_lib.escape(second_range)})</div>"
         "</div>"
     )
@@ -306,6 +329,8 @@ def _bivariate_legend(
 ) -> str:
     first_spec = specs[first]
     second_spec = specs[second]
+    first_name = comparison_label(first, specs)
+    second_name = comparison_label(second, specs)
     palette = PAIR_PALETTES[(first, second)]
     grid_rows = []
     for second_index in reversed(range(3)):
@@ -314,9 +339,9 @@ def _bivariate_legend(
             first_class = CLASS_ORDER[first_index]
             second_class = CLASS_ORDER[second_index]
             title = (
-                f"{first_spec.label}: "
+                f"{first_name}: "
                 f"{_class_range(first_class, thresholds[first], first_spec)}; "
-                f"{second_spec.label}: "
+                f"{second_name}: "
                 f"{_class_range(second_class, thresholds[second], second_spec)}"
             )
             cells.append(
@@ -345,15 +370,15 @@ def _bivariate_legend(
     )
     return (
         "<div class='csa-map-legend'>"
-        "<div class='csa-legend-title'>Combined categories: "
-        f"{html_lib.escape(first_spec.label)} × "
-        f"{html_lib.escape(second_spec.label)}</div>"
-        f"<div class='csa-axis-y-label'>{html_lib.escape(second_spec.label)}</div>"
+        "<div class='csa-legend-title'>"
+        f"{html_lib.escape(first_name)} × "
+        f"{html_lib.escape(second_name)}</div>"
+        f"<div class='csa-axis-y-label'>{html_lib.escape(second_name)}</div>"
         "<table class='csa-bivariate-grid'><tbody>"
         + "".join(grid_rows)
         + column_label_row
         + "</tbody></table>"
-        f"<div class='csa-axis-x-label'>{html_lib.escape(first_spec.label)}</div>"
+        f"<div class='csa-axis-x-label'>{html_lib.escape(first_name)}</div>"
         + caveat_html
         + "</div>"
     )
@@ -394,7 +419,8 @@ def build_legend_html(
         font: 12px/1.35 Arial, sans-serif;
         padding: 10px;
     }
-    .csa-legend-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .csa-legend-title { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
+    .csa-legend-units { color: #374151; font-size: 12px; margin-bottom: 2px; }
     .csa-legend-row { align-items: center; display: flex; gap: 5px; margin-top: 4px; }
     .csa-legend-note { color: #374151; font-size: 11px; margin-top: 6px; }
     .csa-swatch { border: 1px solid #6b7280; display: inline-block; flex: 0 0 auto;
@@ -412,7 +438,8 @@ def build_legend_html(
     @media (max-width: 640px) {
         .csa-map-layout { max-width: none; }
         .csa-map-legend { font-size: 10px; padding: 6px; }
-        .csa-legend-title { font-size: 12px; }
+        .csa-legend-title { font-size: 16px; }
+        .csa-legend-units { font-size: 11px; }
         .csa-legend-note { font-size: 9px; }
     }
     </style>

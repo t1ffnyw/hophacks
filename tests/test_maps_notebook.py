@@ -10,7 +10,7 @@ class MapsNotebookTests(unittest.TestCase):
         self.assertEqual(definitions["selected_keys"], ("heat",))
         self.assertEqual(len(definitions["csa_gdf"]), 55)
         self.assertEqual(len(definitions["category_options"]), 4)
-        self.assertIn("Heat-health vulnerability", definitions["category_options"])
+        self.assertIn("Heat-Health Vulnerability", definitions["category_options"])
         self.assertEqual(len(definitions["category_checks"]), 4)
         self.assertTrue(
             definitions["category_checks"][definitions["LAYER_SPECS"]["heat"].label].value
