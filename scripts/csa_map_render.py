@@ -8,7 +8,7 @@ from typing import Mapping, Sequence
 
 import folium
 import geopandas as gpd
-from branca.element import Element, MacroElement, Template
+from branca.element import Figure, MacroElement, Template
 
 from scripts.csa_map_data import (
     CATEGORY_ORDER,
@@ -19,6 +19,16 @@ from scripts.csa_map_data import (
 
 
 MISSING_COLOR = "#bdbdbd"
+MAP_EMBED_HEIGHT = "520px"
+_TOOLTIP_STYLE = (
+    "background-color: white; color: #111827; "
+    "font-family: arial; font-size: 12px; padding: 8px;"
+)
+_POPUP_PANEL_ALPHA = "rgba(255, 255, 255, 0.85)"
+_POPUP_STYLE = (
+    f"background-color: {_POPUP_PANEL_ALPHA}; color: #111827; "
+    "font-family: arial; font-size: 12px; padding: 8px;"
+)
 SINGLE_PALETTES: dict[str, tuple[str, str, str]] = {
     "heat": ("#fee5d9", "#fb6a4a", "#a50f15"),
     "health": ("#efedf5", "#bcbddc", "#756bb1"),
@@ -187,7 +197,7 @@ def _prepare_tooltip_columns(
         value_field = f"_tooltip_value_{key}"
         class_field = f"_tooltip_class_{key}"
         prepared[value_field] = prepared[spec.column].map(
-            lambda value: _format_measurement(value, spec)
+            lambda value, s=spec: _format_measurement(value, s)
         )
         prepared[class_field] = (
             prepared[f"{key}_class"].fillna("Missing").astype(str)
@@ -195,8 +205,22 @@ def _prepare_tooltip_columns(
     return prepared
 
 
+def _prepare_popup_columns(
+    gdf: gpd.GeoDataFrame,
+    specs: Mapping[str, LayerSpec],
+) -> gpd.GeoDataFrame:
+    prepared = gdf.copy()
+    for key in CATEGORY_ORDER:
+        spec = specs[key]
+        prepared[f"_popup_value_{key}"] = prepared[spec.column].map(
+            lambda value, s=spec: _format_measurement(value, s)
+        )
+    return prepared
+
+
 def _style_function(
     selected_keys: tuple[str, ...],
+    active_bin: tuple[str, str] | None = None,
 ) -> callable:
     def style(feature: dict) -> dict[str, object]:
         properties = feature["properties"]
@@ -214,6 +238,8 @@ def _style_function(
             fill_color = PAIR_PALETTES[(first, second)][
                 CLASS_INDEX[classes[1]]
             ][CLASS_INDEX[classes[0]]]
+            if active_bin is not None and classes != active_bin:
+                fill_color = MISSING_COLOR
         return {
             "color": "#4b5563",
             "fillColor": fill_color,
@@ -232,7 +258,7 @@ def _tooltip(
     for key in selected_keys:
         spec = specs[key]
         fields.append(f"_tooltip_value_{key}")
-        aliases.append(f"{spec.label} ({spec.units}; {spec.period})")
+        aliases.append(spec.label)
         if len(selected_keys) == 2:
             fields.append(f"_tooltip_class_{key}")
             aliases.append(f"{spec.label} class")
@@ -242,11 +268,46 @@ def _tooltip(
         labels=True,
         sticky=False,
         localize=True,
-        style=(
-            "background-color: white; color: #111827; "
-            "font-family: arial; font-size: 12px; padding: 8px;"
-        ),
+        style=_TOOLTIP_STYLE,
     )
+
+
+def _popup(specs: Mapping[str, LayerSpec]) -> folium.GeoJsonPopup:
+    fields = ["Community"]
+    aliases = ["CSA"]
+    for key in CATEGORY_ORDER:
+        fields.append(f"_popup_value_{key}")
+        aliases.append(specs[key].label)
+    return folium.GeoJsonPopup(
+        fields=fields,
+        aliases=aliases,
+        labels=True,
+        localize=True,
+        style=_POPUP_STYLE,
+        closeButton=False,
+    )
+
+
+# Plain-language unit lines shown under single-category legend titles.
+LEGEND_UNIT_DESCRIPTIONS: dict[str, str] = {
+    "heat": "Degrees Celsius",
+    "health": "Heat-health risk index (percentile)",
+    "income": "USD",
+    "trees": "Percent of neighborhood area",
+}
+
+# Shorter names for bivariate comparison titles and axes.
+LEGEND_COMPARISON_LABELS: dict[str, str] = {
+    "heat": "Heat",
+    "health": "Heat-Health Vulnerability",
+    "income": "Household Income",
+    "trees": "Tree Canopy",
+}
+
+
+def comparison_label(key: str, specs: Mapping[str, LayerSpec]) -> str:
+    """Return the short display label used in two-category legends."""
+    return LEGEND_COMPARISON_LABELS.get(key, specs[key].label)
 
 
 def _single_legend(
@@ -268,19 +329,39 @@ def _single_legend(
         if spec.caveat
         else ""
     )
+    unit_description = LEGEND_UNIT_DESCRIPTIONS.get(key, spec.units)
     return (
         "<div class='csa-map-legend'>"
         f"<div class='csa-legend-title'>{html_lib.escape(spec.label)}</div>"
-        f"<div>{html_lib.escape(spec.units)}</div>"
-        f"<div>{html_lib.escape(spec.period)}</div>"
-        "<div class='csa-legend-note'>Darker means a higher value; "
-        "this is not inherently better or worse.</div>"
+        f"<div class='csa-legend-units'>{html_lib.escape(unit_description)}</div>"
         + "".join(rows)
         + caveat
-        + "<div class='csa-legend-row'>"
-        f"<span class='csa-swatch' style='background:{MISSING_COLOR}'></span>"
-        "<span><strong>Missing</strong>: no selected measurement</span>"
-        "</div></div>"
+        + "</div>"
+    )
+
+
+def format_bivariate_bin_detail(
+    first: str,
+    second: str,
+    first_class: str,
+    second_class: str,
+    specs: Mapping[str, LayerSpec],
+    thresholds: Mapping[str, TercileThresholds],
+) -> str:
+    """Return detail HTML for one selected bivariate legend cell."""
+    first_spec = specs[first]
+    second_spec = specs[second]
+    first_range = _class_range(first_class, thresholds[first], first_spec)
+    second_range = _class_range(second_class, thresholds[second], second_spec)
+    first_name = comparison_label(first, specs)
+    second_name = comparison_label(second, specs)
+    return (
+        "<div class='csa-bin-detail'>"
+        f"<div><strong>{html_lib.escape(first_name)}</strong>: "
+        f"{html_lib.escape(first_class)} ({html_lib.escape(first_range)})</div>"
+        f"<div><strong>{html_lib.escape(second_name)}</strong>: "
+        f"{html_lib.escape(second_class)} ({html_lib.escape(second_range)})</div>"
+        "</div>"
     )
 
 
@@ -292,6 +373,8 @@ def _bivariate_legend(
 ) -> str:
     first_spec = specs[first]
     second_spec = specs[second]
+    first_name = comparison_label(first, specs)
+    second_name = comparison_label(second, specs)
     palette = PAIR_PALETTES[(first, second)]
     grid_rows = []
     for second_index in reversed(range(3)):
@@ -300,27 +383,27 @@ def _bivariate_legend(
             first_class = CLASS_ORDER[first_index]
             second_class = CLASS_ORDER[second_index]
             title = (
-                f"{first_spec.label}: "
+                f"{first_name}: "
                 f"{_class_range(first_class, thresholds[first], first_spec)}; "
-                f"{second_spec.label}: "
+                f"{second_name}: "
                 f"{_class_range(second_class, thresholds[second], second_spec)}"
             )
             cells.append(
                 f"<td title='{html_lib.escape(title, quote=True)}' "
-                f"style='background:{palette[second_index][first_index]}'"
+                f"data-first-class='{first_class}' "
+                f"data-second-class='{second_class}' "
+                f"style='background:{palette[second_index][first_index]}; cursor:pointer'"
                 "></td>"
             )
         grid_rows.append(
-            f"<tr><th>{CLASS_ORDER[second_index]}</th>{''.join(cells)}</tr>"
+            f"<tr><th scope='row'>{CLASS_ORDER[second_index]}</th>"
+            f"{''.join(cells)}</tr>"
         )
-    first_ranges = "; ".join(
-        f"{name}: {_class_range(name, thresholds[first], first_spec)}"
+    column_labels = "".join(
+        f"<td class='csa-bivariate-col-label'>{name}</td>"
         for name in CLASS_ORDER
     )
-    second_ranges = "; ".join(
-        f"{name}: {_class_range(name, thresholds[second], second_spec)}"
-        for name in CLASS_ORDER
-    )
+    column_label_row = f"<tr><td></td>{column_labels}</tr>"
     caveats = " ".join(
         caveat for caveat in (first_spec.caveat, second_spec.caveat) if caveat
     )
@@ -331,26 +414,15 @@ def _bivariate_legend(
     )
     return (
         "<div class='csa-map-legend'>"
-        "<div class='csa-legend-title'>Bivariate choropleth</div>"
-        f"<div class='csa-axis-y'>{html_lib.escape(second_spec.label)} "
-        "Low → High</div>"
+        "<div class='csa-legend-title'>"
+        f"{html_lib.escape(first_name)} × "
+        f"{html_lib.escape(second_name)}</div>"
+        f"<div class='csa-axis-y-label'>{html_lib.escape(second_name)}</div>"
         "<table class='csa-bivariate-grid'><tbody>"
         + "".join(grid_rows)
+        + column_label_row
         + "</tbody></table>"
-        f"<div class='csa-axis-x'>Low → High: "
-        f"{html_lib.escape(first_spec.label)}</div>"
-        f"<div class='csa-legend-note'><strong>{html_lib.escape(first_spec.label)}"
-        f"</strong> ({html_lib.escape(first_spec.units)}; "
-        f"{html_lib.escape(first_spec.period)}) — "
-        f"{html_lib.escape(first_ranges)}</div>"
-        f"<div class='csa-legend-note'><strong>{html_lib.escape(second_spec.label)}"
-        f"</strong> ({html_lib.escape(second_spec.units)}; "
-        f"{html_lib.escape(second_spec.period)}) — "
-        f"{html_lib.escape(second_ranges)}</div>"
-        "<div class='csa-legend-row'>"
-        f"<span class='csa-swatch' style='background:{MISSING_COLOR}'></span>"
-        "<span><strong>Missing</strong>: either selected measurement missing</span>"
-        "</div>"
+        f"<div class='csa-axis-x-label'>{html_lib.escape(first_name)}</div>"
         + caveat_html
         + "</div>"
     )
@@ -386,40 +458,64 @@ def fill_color_for_properties(
     return str(_style_function(selected)({"properties": dict(properties)})["fillColor"])
 
 
-def _add_legend(
-    map_widget: folium.Map,
-    selected_keys: tuple[str, ...],
+def build_legend_html(
+    selected_keys: Sequence[str],
+    specs: Mapping[str, LayerSpec],
+    
+    thresholds: Mapping[str, TercileThresholds],
+) -> str:
+    """Return the HTML card used beside a one- or two-category choropleth."""
+    selected = canonicalize_selection(selected_keys)
+    if len(selected) == 1:
+        return _single_legend(
+            selected[0],
+            specs[selected[0]],
+            thresholds[selected[0]],
+        )
+    return _bivariate_legend(
+        selected[0],
+        selected[1],
+        specs,
+        thresholds,
+    )
+
+
+def fill_color_for_properties(
+    selected_keys: Sequence[str],
+    properties: Mapping[str, object],
+) -> str:
+    """Return the choropleth fill color for one GeoJSON feature."""
+    selected = canonicalize_selection(selected_keys)
+    return str(_style_function(selected)({"properties": dict(properties)})["fillColor"])
+
+
+def build_legend_html(
+    selected_keys: Sequence[str],
     specs: Mapping[str, LayerSpec],
     thresholds: Mapping[str, TercileThresholds],
 ) -> None:
     legend = build_legend_html(selected_keys, specs, thresholds)
+) -> str:
+    """Return standalone legend HTML for the notebook sidebar."""
+    selected = canonicalize_selection(selected_keys)
+    if len(selected) == 1:
+        legend = _single_legend(
+            selected[0],
+            specs[selected[0]],
+            thresholds[selected[0]],
+        )
+    else:
+        legend = _bivariate_legend(
+            selected[0],
+            selected[1],
+            specs,
+            thresholds,
+        )
     css = """
     <style>
-    html, body {
-        box-sizing: border-box;
-        height: 100%;
-        margin: 0;
-        width: 100%;
-    }
-    body {
-        align-items: stretch;
-        display: flex;
-        flex-direction: row;
-        gap: 12px;
-        padding: 8px;
-    }
-    .folium-map {
-        flex: 1 1 auto;
-        height: 100% !important;
-        min-width: 0;
-        order: 1;
-    }
     .csa-map-layout {
-        align-self: flex-start;
-        flex: 0 0 310px;
-        max-height: 100%;
-        order: 2;
-        overflow-y: auto;
+        max-width: none;
+        width: 100%;
     }
     .csa-map-legend {
         background: rgba(255, 255, 255, 0.96);
@@ -430,29 +526,99 @@ def _add_legend(
         font: 12px/1.35 Arial, sans-serif;
         padding: 10px;
     }
-    .csa-legend-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .csa-legend-title { font-size: 18px; font-weight: 700; margin-bottom: 3px; }
+    .csa-legend-units { color: #374151; font-size: 12px; margin-bottom: 2px; }
     .csa-legend-row { align-items: center; display: flex; gap: 5px; margin-top: 4px; }
     .csa-legend-note { color: #374151; font-size: 11px; margin-top: 6px; }
     .csa-swatch { border: 1px solid #6b7280; display: inline-block; flex: 0 0 auto;
         height: 14px; width: 22px; }
     .csa-bivariate-grid { border-collapse: collapse; margin: 5px auto 2px; }
-    .csa-bivariate-grid td { border: 1px solid #6b7280; height: 25px; width: 25px; }
+    .csa-bivariate-grid td { border: 1px solid #6b7280; height: 48px; width: 48px; }
     .csa-bivariate-grid th { font-weight: 600; padding: 2px 4px; }
-    .csa-axis-x { font-size: 11px; text-align: center; }
-    .csa-axis-y { font-size: 11px; margin-top: 4px; }
+    .csa-bivariate-col-label { font-size: 11px; text-align: center; border: none !important;
+        height: auto !important; padding-top: 2px; }
+    .csa-bin-selected { outline: 3px solid #111827; outline-offset: -2px; z-index: 1; position: relative; }
+    .csa-axis-x-label { font-size: 11px; font-weight: 600; margin-top: 2px; text-align: center; }
+    .csa-axis-y-label { font-size: 11px; font-weight: 600; margin-top: 4px; }
+    .csa-bin-detail { background: #f9fafb; border: 1px solid #d1d5db; border-radius: 3px;
+        font-size: 11px; margin-top: 6px; padding: 6px 8px; }
     @media (max-width: 640px) {
-        body { flex-direction: column; }
-        .folium-map { flex: 1 1 auto; height: 55vh !important; order: 1; }
-        .csa-map-layout { flex: 0 0 auto; max-width: none; order: 2; width: 100%; }
+        .csa-map-layout { max-width: none; }
         .csa-map-legend { font-size: 10px; padding: 6px; }
-        .csa-legend-title { font-size: 12px; }
+        .csa-legend-title { font-size: 16px; }
+        .csa-legend-units { font-size: 11px; }
         .csa-legend-note { font-size: 9px; }
     }
     </style>
     """
-    map_widget.get_root().html.add_child(
-        Element(css + f"<div class='csa-map-layout'>{legend}</div>")
-    )
+    return css + f"<div class='csa-map-layout'>{legend}</div>"
+
+
+# Match highlight_function so click/keyboard focus outlines the region path
+# instead of Chrome's rectangular SVG focus ring around the feature bounds.
+_REGION_HIGHLIGHT = {
+    "color": "#111827",
+    "fillOpacity": 1.0,
+    "weight": 2.5,
+}
+
+
+class _RegionFocusStyle(MacroElement):
+    """Focus stroke + popup chrome styled like Leaflet tooltips."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._name = "RegionFocusStyle"
+        color = _REGION_HIGHLIGHT["color"]
+        weight = _REGION_HIGHLIGHT["weight"]
+        panel = _POPUP_PANEL_ALPHA
+        self._template = Template(
+            f"""
+            {{% macro header(this, kwargs) %}}
+            <style>
+            .leaflet-container path.leaflet-interactive:focus {{
+                outline: none;
+                stroke: {color};
+                stroke-width: {weight};
+            }}
+            /* Transparent outer Leaflet shell; semi-opaque inner Folium panel. */
+            .leaflet-popup-content-wrapper {{
+                background: transparent;
+                color: #111827;
+                border: none;
+                border-radius: 3px;
+                box-shadow: none;
+                padding: 0;
+            }}
+            .leaflet-popup-content {{
+                margin: 0;
+                line-height: 1.35;
+                font: 12px/1.35 Arial, sans-serif;
+            }}
+            .leaflet-popup-tip {{
+                background: {panel};
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                width: 12px;
+                height: 12px;
+                margin: -6px auto 0;
+                padding: 0;
+            }}
+            .leaflet-popup-close-button {{
+                display: none;
+            }}
+            .foliumpopup {{
+                background-color: {panel};
+                color: #111827;
+                font-family: arial;
+                font-size: 12px;
+                padding: 8px;
+                border-radius: 3px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            }}
+            </style>
+            {{% endmacro %}}
+            """
+        )
 
 
 class _ResetToBaltimore(MacroElement):
@@ -498,10 +664,12 @@ def build_csa_map(
     thresholds: Mapping[str, TercileThresholds],
     tile_url: str | None,
     tile_attr: str | None,
+    active_bin: tuple[str, str] | None = None,
 ) -> folium.Map:
     """Build one opaque GeoJson map for one or two selected categories."""
     selected = canonicalize_selection(selected_keys)
     render_gdf = _prepare_tooltip_columns(gdf, selected, specs)
+    render_gdf = _prepare_popup_columns(render_gdf, specs)
     if render_gdf.crs is not None and render_gdf.crs.to_epsg() != 4326:
         render_gdf = render_gdf.to_crs("EPSG:4326")
 
@@ -525,16 +693,22 @@ def build_csa_map(
     folium.GeoJson(
         data=render_gdf.to_json(drop_id=True),
         name="Baltimore CSA choropleth",
-        style_function=_style_function(selected),
-        highlight_function=lambda feature: {
-            "color": "#111827",
-            "fillOpacity": 1.0,
-            "weight": 2.5,
-        },
+        style_function=_style_function(selected, active_bin=active_bin),
+        highlight_function=lambda feature: dict(_REGION_HIGHLIGHT),
         tooltip=_tooltip(selected, specs),
+        popup=_popup(specs),
         show=True,
     ).add_to(map_widget)
     map_widget.fit_bounds(bounds)
+    map_widget.add_child(_RegionFocusStyle())
     map_widget.add_child(_ResetToBaltimore(bounds))
-    _add_legend(map_widget, selected, specs, thresholds)
     return map_widget
+
+def embed_map_html(
+    map_widget: folium.Map,
+    height: str = MAP_EMBED_HEIGHT,
+) -> str:
+    """Embed a Folium map in a fixed-height iframe for stable notebook layout."""
+    figure = Figure(width="100%", height=height)
+    figure.add_child(map_widget)
+    return figure._repr_html_()

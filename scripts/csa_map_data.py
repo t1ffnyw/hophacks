@@ -67,7 +67,7 @@ LAYER_SPECS: dict[str, LayerSpec] = {
     ),
     "health": LayerSpec(
         key="health",
-        label="Heat-health vulnerability",
+        label="Heat-Health Vulnerability",
         column="illness_pctile",
         units="PR_HRI percentile",
         period="2024 HHI source label; derived CSA approximation",
@@ -76,7 +76,7 @@ LAYER_SPECS: dict[str, LayerSpec] = {
     ),
     "income": LayerSpec(
         key="income",
-        label="Median household income",
+        label="Median Household Income",
         column="mhhi23",
         units="USD",
         period="2023 income year",
@@ -84,7 +84,7 @@ LAYER_SPECS: dict[str, LayerSpec] = {
     ),
     "trees": LayerSpec(
         key="trees",
-        label="Tree canopy coverage",
+        label="Tree Canopy Coverage",
         column="trees17",
         units="percent of CSA area",
         period="2017",
