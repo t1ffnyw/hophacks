@@ -52,13 +52,11 @@ def _(mo):
     mo.md(r"""
     ## Insight Synthesis
 
-    1. **Neighborhoods with less tree cover tend to be hotter.** Across Baltimore's CSAs, tree cover and afternoon temperature have a correlation of **[r = −0.__]**.
+    1. **Neighborhoods with less tree cover have higher temperatures.**
 
+    2. **Neighborhoods with less tree cover tend to have more heat-related illnesses.**
 
-    2. **Lower-income neighborhoods tend to have fewer trees and more heat.** The lowest-income third of CSAs (median household income below **$[____]**) average **[__]%** tree cover, compared with **[__]%** in the highest-income third, and their afternoon temperatures run about **[__]°C** hotter.
-
-
-    3. **Some neighborhoods face all three conditions at once.** **[N]** CSAs fall in the hottest third, the lowest third for tree cover, and the lowest third for income at the same time, including **[names]**. These are natural places to start when asking where added shade could matter most.
+    3. **Lower-income neighborhoods tend to have fewer trees and more heat.**
     """)
     return
 
