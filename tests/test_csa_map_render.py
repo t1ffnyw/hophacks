@@ -183,6 +183,8 @@ class CsaMapRenderTests(unittest.TestCase):
         self.assertIn(".leaflet-popup-close-button", rendered)
         self.assertIn("box-shadow: 0 1px 3px rgba(0,0,0,0.4)", rendered)
         self.assertIn("border-radius: 3px", rendered)
+        self.assertIn("rgba(255, 255, 255, 0.85)", rendered)
+        self.assertIn(".foliumpopup", rendered)
 
     def test_embed_map_html_uses_fixed_height(self):
         self.assertEqual(MAP_EMBED_HEIGHT, "520px")

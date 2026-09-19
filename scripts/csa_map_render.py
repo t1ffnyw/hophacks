@@ -24,6 +24,11 @@ _TOOLTIP_STYLE = (
     "background-color: white; color: #111827; "
     "font-family: arial; font-size: 12px; padding: 8px;"
 )
+_POPUP_PANEL_ALPHA = "rgba(255, 255, 255, 0.85)"
+_POPUP_STYLE = (
+    f"background-color: {_POPUP_PANEL_ALPHA}; color: #111827; "
+    "font-family: arial; font-size: 12px; padding: 8px;"
+)
 SINGLE_PALETTES: dict[str, tuple[str, str, str]] = {
     "heat": ("#fee5d9", "#fb6a4a", "#a50f15"),
     "health": ("#efedf5", "#bcbddc", "#756bb1"),
@@ -231,7 +236,7 @@ def _popup(specs: Mapping[str, LayerSpec]) -> folium.GeoJsonPopup:
         aliases=aliases,
         labels=True,
         localize=True,
-        style=_TOOLTIP_STYLE,
+        style=_POPUP_STYLE,
         closeButton=False,
     )
 
@@ -418,6 +423,7 @@ class _RegionFocusStyle(MacroElement):
         self._name = "RegionFocusStyle"
         color = _REGION_HIGHLIGHT["color"]
         weight = _REGION_HIGHLIGHT["weight"]
+        panel = _POPUP_PANEL_ALPHA
         self._template = Template(
             f"""
             {{% macro header(this, kwargs) %}}
@@ -427,11 +433,11 @@ class _RegionFocusStyle(MacroElement):
                 stroke: {color};
                 stroke-width: {weight};
             }}
-            /* Match Leaflet tooltip chrome so click cards look like hover tips. */
+            /* Semi-transparent popup shell + inner panel (both see-through). */
             .leaflet-popup-content-wrapper {{
-                background: #fff;
+                background: {panel};
                 color: #111827;
-                border: 1px solid #fff;
+                border: 1px solid {panel};
                 border-radius: 3px;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.4);
                 padding: 0;
@@ -442,7 +448,7 @@ class _RegionFocusStyle(MacroElement):
                 font: 12px/1.35 Arial, sans-serif;
             }}
             .leaflet-popup-tip {{
-                background: #fff;
+                background: {panel};
                 box-shadow: 0 1px 3px rgba(0,0,0,0.4);
                 width: 12px;
                 height: 12px;
@@ -453,7 +459,7 @@ class _RegionFocusStyle(MacroElement):
                 display: none;
             }}
             .foliumpopup {{
-                background-color: white;
+                background-color: {panel};
                 color: #111827;
                 font-family: arial;
                 font-size: 12px;
