@@ -112,8 +112,14 @@ Areas.
 
 @app.cell
 def _(mo):
-    get_category_selection, set_category_selection = mo.state(("heat",))
-    get_category_revision, set_category_revision = mo.state(0)
+    get_category_selection, set_category_selection = mo.state(
+        ("heat",),
+        allow_self_loops=True,
+    )
+    get_category_revision, set_category_revision = mo.state(
+        0,
+        allow_self_loops=True,
+    )
     return (
         get_category_revision,
         get_category_selection,

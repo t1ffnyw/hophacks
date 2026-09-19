@@ -101,6 +101,12 @@ class MapsNotebookTests(unittest.TestCase):
 
         self.assertEqual(transitioned, ("heat", "health"))
 
+    def test_category_state_allows_self_loops_for_checkbox_refresh(self):
+        _, definitions = maps.app.run()
+
+        self.assertTrue(definitions["get_category_selection"].allow_self_loops)
+        self.assertTrue(definitions["get_category_revision"].allow_self_loops)
+
     def test_third_checkbox_event_preserves_selection_and_refreshes_widgets(self):
         _, definitions = maps.app.run()
 
