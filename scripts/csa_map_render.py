@@ -176,6 +176,7 @@ def _prepare_popup_columns(
 
 def _style_function(
     selected_keys: tuple[str, ...],
+    active_bin: tuple[str, str] | None = None,
 ) -> callable:
     def style(feature: dict) -> dict[str, object]:
         properties = feature["properties"]
@@ -193,6 +194,8 @@ def _style_function(
             fill_color = PAIR_PALETTES[(first, second)][
                 CLASS_INDEX[classes[1]]
             ][CLASS_INDEX[classes[0]]]
+            if active_bin is not None and classes != active_bin:
+                fill_color = MISSING_COLOR
         return {
             "color": "#4b5563",
             "fillColor": fill_color,
@@ -272,6 +275,29 @@ def _single_legend(
     )
 
 
+def format_bivariate_bin_detail(
+    first: str,
+    second: str,
+    first_class: str,
+    second_class: str,
+    specs: Mapping[str, LayerSpec],
+    thresholds: Mapping[str, TercileThresholds],
+) -> str:
+    """Return detail HTML for one selected bivariate legend cell."""
+    first_spec = specs[first]
+    second_spec = specs[second]
+    first_range = _class_range(first_class, thresholds[first], first_spec)
+    second_range = _class_range(second_class, thresholds[second], second_spec)
+    return (
+        "<div class='csa-bin-detail'>"
+        f"<div><strong>{html_lib.escape(first_spec.label)}</strong>: "
+        f"{html_lib.escape(first_class)} ({html_lib.escape(first_range)})</div>"
+        f"<div><strong>{html_lib.escape(second_spec.label)}</strong>: "
+        f"{html_lib.escape(second_class)} ({html_lib.escape(second_range)})</div>"
+        "</div>"
+    )
+
+
 def _bivariate_legend(
     first: str,
     second: str,
@@ -281,13 +307,7 @@ def _bivariate_legend(
     first_spec = specs[first]
     second_spec = specs[second]
     palette = PAIR_PALETTES[(first, second)]
-    column_headers = "".join(
-        f"<th class='csa-bivariate-col-label' scope='col'>{name}</th>"
-        for name in CLASS_ORDER
-    )
-    grid_rows = [
-        f"<tr><th scope='row'></th>{column_headers}</tr>",
-    ]
+    grid_rows = []
     for second_index in reversed(range(3)):
         cells = []
         for first_index in range(3):
@@ -301,21 +321,20 @@ def _bivariate_legend(
             )
             cells.append(
                 f"<td title='{html_lib.escape(title, quote=True)}' "
-                f"style='background:{palette[second_index][first_index]}'"
+                f"data-first-class='{first_class}' "
+                f"data-second-class='{second_class}' "
+                f"style='background:{palette[second_index][first_index]}; cursor:pointer'"
                 "></td>"
             )
         grid_rows.append(
             f"<tr><th scope='row'>{CLASS_ORDER[second_index]}</th>"
             f"{''.join(cells)}</tr>"
         )
-    first_ranges = "; ".join(
-        f"{name}: {_class_range(name, thresholds[first], first_spec)}"
+    column_labels = "".join(
+        f"<td class='csa-bivariate-col-label'>{name}</td>"
         for name in CLASS_ORDER
     )
-    second_ranges = "; ".join(
-        f"{name}: {_class_range(name, thresholds[second], second_spec)}"
-        for name in CLASS_ORDER
-    )
+    column_label_row = f"<tr><td></td>{column_labels}</tr>"
     caveats = " ".join(
         caveat for caveat in (first_spec.caveat, second_spec.caveat) if caveat
     )
@@ -329,21 +348,12 @@ def _bivariate_legend(
         "<div class='csa-legend-title'>Combined categories: "
         f"{html_lib.escape(first_spec.label)} × "
         f"{html_lib.escape(second_spec.label)}</div>"
-        f"<div class='csa-axis-y-caption'>{html_lib.escape(second_spec.label)}"
-        " (Low → High, rows)</div>"
+        f"<div class='csa-axis-y-label'>{html_lib.escape(second_spec.label)}</div>"
         "<table class='csa-bivariate-grid'><tbody>"
         + "".join(grid_rows)
+        + column_label_row
         + "</tbody></table>"
-        f"<div class='csa-axis-x'>{html_lib.escape(first_spec.label)} "
-        "(Low → High, columns)</div>"
-        f"<div class='csa-legend-note'><strong>{html_lib.escape(first_spec.label)}"
-        f"</strong> ({html_lib.escape(first_spec.units)}; "
-        f"{html_lib.escape(first_spec.period)}) — "
-        f"{html_lib.escape(first_ranges)}</div>"
-        f"<div class='csa-legend-note'><strong>{html_lib.escape(second_spec.label)}"
-        f"</strong> ({html_lib.escape(second_spec.units)}; "
-        f"{html_lib.escape(second_spec.period)}) — "
-        f"{html_lib.escape(second_ranges)}</div>"
+        f"<div class='csa-axis-x-label'>{html_lib.escape(first_spec.label)}</div>"
         + caveat_html
         + "</div>"
     )
@@ -390,11 +400,15 @@ def build_legend_html(
     .csa-swatch { border: 1px solid #6b7280; display: inline-block; flex: 0 0 auto;
         height: 14px; width: 22px; }
     .csa-bivariate-grid { border-collapse: collapse; margin: 5px auto 2px; }
-    .csa-bivariate-grid td { border: 1px solid #6b7280; height: 36px; width: 36px; }
+    .csa-bivariate-grid td { border: 1px solid #6b7280; height: 48px; width: 48px; }
     .csa-bivariate-grid th { font-weight: 600; padding: 2px 4px; }
-    .csa-bivariate-col-label { font-size: 11px; text-align: center; }
-    .csa-axis-x { font-size: 11px; margin-top: 4px; text-align: center; }
-    .csa-axis-y-caption { font-size: 11px; font-weight: 600; margin-top: 4px; }
+    .csa-bivariate-col-label { font-size: 11px; text-align: center; border: none !important;
+        height: auto !important; padding-top: 2px; }
+    .csa-bin-selected { outline: 3px solid #111827; outline-offset: -2px; z-index: 1; position: relative; }
+    .csa-axis-x-label { font-size: 11px; font-weight: 600; margin-top: 2px; text-align: center; }
+    .csa-axis-y-label { font-size: 11px; font-weight: 600; margin-top: 4px; }
+    .csa-bin-detail { background: #f9fafb; border: 1px solid #d1d5db; border-radius: 3px;
+        font-size: 11px; margin-top: 6px; padding: 6px 8px; }
     @media (max-width: 640px) {
         .csa-map-layout { max-width: none; }
         .csa-map-legend { font-size: 10px; padding: 6px; }
@@ -516,6 +530,7 @@ def build_csa_map(
     thresholds: Mapping[str, TercileThresholds],
     tile_url: str | None,
     tile_attr: str | None,
+    active_bin: tuple[str, str] | None = None,
 ) -> folium.Map:
     """Build one opaque GeoJson map for one or two selected categories."""
     selected = canonicalize_selection(selected_keys)
@@ -544,7 +559,7 @@ def build_csa_map(
     folium.GeoJson(
         data=render_gdf.to_json(drop_id=True),
         name="Baltimore CSA choropleth",
-        style_function=_style_function(selected),
+        style_function=_style_function(selected, active_bin=active_bin),
         highlight_function=lambda feature: dict(_REGION_HIGHLIGHT),
         tooltip=_tooltip(selected, specs),
         popup=_popup(specs),

@@ -32,12 +32,12 @@ class MapsNotebookTests(unittest.TestCase):
         self.assertIn(expected_height, map_region.text)
         self.assertIn(expected_height, sidebar_region.text)
 
-    def test_map_and_sidebar_use_seventy_thirty_widths(self):
+    def test_map_and_sidebar_use_sixty_five_thirty_five_widths(self):
         _, definitions = maps.app.run()
         layout_text = definitions["map_layout"].text
 
-        self.assertIn("<div style='flex: 7'>", layout_text)
-        self.assertIn("<div style='flex: 3'>", layout_text)
+        self.assertIn("<div style='flex: 6.5'>", layout_text)
+        self.assertIn("<div style='flex: 3.5'>", layout_text)
 
     def test_categories_and_checkboxes_render_before_scrollable_legend(self):
         _, definitions = maps.app.run()
@@ -158,6 +158,22 @@ class MapsNotebookTests(unittest.TestCase):
             message,
             "At least one category is required; showing Heat.",
         )
+
+
+    def test_toggle_active_bin_sets_and_clears(self):
+        _, definitions = maps.app.run()
+        toggle = definitions["toggle_active_bin"]
+        self.assertEqual(toggle(None, ("Low", "High")), ("Low", "High"))
+        self.assertIsNone(toggle(("Low", "High"), ("Low", "High")))
+        self.assertEqual(toggle(("Low", "High"), ("Medium", "Low")), ("Medium", "Low"))
+        self.assertIsNone(toggle(None, None))
+
+    def test_active_bin_clears_for_single_selection(self):
+        _, definitions = maps.app.run()
+        clear = definitions["active_bin_for_selection"]
+        self.assertIsNone(clear(("heat",), ("Low", "High")))
+        self.assertIsNone(clear(("heat",), None))
+        self.assertEqual(clear(("heat", "income"), ("Low", "High")), ("Low", "High"))
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ from scripts.csa_map_render import (
     build_legend_html,
     canonicalize_selection,
     embed_map_html,
+    format_bivariate_bin_detail,
 )
 
 
@@ -236,7 +237,7 @@ class CsaMapRenderTests(unittest.TestCase):
                 legend,
             )
 
-    def test_bivariate_legend_title_axes_and_grid_size(self):
+    def test_bivariate_legend_title_and_grid_size(self):
         first, second = "heat", "income"
         first_label = self.diagnostics.layer_specs[first].label
         second_label = self.diagnostics.layer_specs[second].label
@@ -251,29 +252,86 @@ class CsaMapRenderTests(unittest.TestCase):
             legend,
         )
         self.assertNotIn("Bivariate choropleth", legend)
-        self.assertIn("height: 36px", legend)
-        self.assertIn("width: 36px", legend)
-        self.assertIn("csa-bivariate-col-label", legend)
-        for class_name in ("Low", "Medium", "High"):
-            self.assertIn(
-                f"<th class='csa-bivariate-col-label' scope='col'>{class_name}</th>",
-                legend,
-            )
-            self.assertIn(f"<th scope='row'>{class_name}</th>", legend)
-        self.assertIn("csa-axis-y-caption", legend)
-        self.assertIn(second_label, legend)
+        self.assertIn("height: 48px", legend)
+        self.assertIn("width: 48px", legend)
 
-    def test_bivariate_legend_contains_axes_and_numeric_ranges(self):
+    def test_bivariate_legend_has_left_row_labels(self):
         legend = build_legend_html(
             ("heat", "income"),
             self.diagnostics.layer_specs,
             self.diagnostics.thresholds,
         )
+        second_label = self.diagnostics.layer_specs["income"].label
+        for class_name in ("Low", "Medium", "High"):
+            self.assertIn(f"<th scope='row'>{class_name}</th>", legend)
+        self.assertIn("csa-axis-y-label", legend)
+        self.assertIn(second_label, legend)
 
-        self.assertIn("Low → High", legend)
-        self.assertIn("Modeled afternoon surface", legend)
+    def test_bivariate_legend_has_bottom_column_labels(self):
+        legend = build_legend_html(
+            ("heat", "income"),
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+        )
+        first_label = self.diagnostics.layer_specs["heat"].label
+        for class_name in ("Low", "Medium", "High"):
+            self.assertIn(
+                f"<td class='csa-bivariate-col-label'>{class_name}</td>",
+                legend,
+            )
+        self.assertIn("csa-axis-x-label", legend)
+        self.assertIn(first_label, legend)
+
+    def test_bivariate_legend_column_labels_after_grid_rows(self):
+        legend = build_legend_html(
+            ("heat", "income"),
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+        )
+        last_color_cell = legend.rfind("cursor:pointer'></td>")
+        col_label_td = legend.find("<td class='csa-bivariate-col-label'>Low</td>")
+        self.assertGreater(col_label_td, last_color_cell)
+
+    def test_bivariate_legend_no_range_notes(self):
+        legend = build_legend_html(
+            ("heat", "income"),
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+        )
+        self.assertNotIn("Low → High", legend)
+        self.assertNotIn("— Low:", legend)
+        self.assertNotIn("(Low → High, rows)", legend)
+        self.assertNotIn("(Low → High, columns)", legend)
+        first_spec = self.diagnostics.layer_specs["heat"]
+        self.assertNotIn(
+            f"({first_spec.units}; {first_spec.period})",
+            legend,
+        )
+
+    def test_bivariate_legend_contains_both_category_labels(self):
+        legend = build_legend_html(
+            ("heat", "income"),
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+        )
+        self.assertIn("Heat", legend)
         self.assertIn("Median household income", legend)
-        self.assertIn("2023 income year", legend)
+
+    def test_format_bivariate_bin_detail(self):
+        detail = format_bivariate_bin_detail(
+            "heat",
+            "income",
+            "Low",
+            "High",
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+        )
+        self.assertIn("Heat", detail)
+        self.assertIn("Low", detail)
+        self.assertIn("Median household income", detail)
+        self.assertIn("High", detail)
+        self.assertIn("≤", detail)
+        self.assertIn(">", detail)
 
     def test_missing_values_use_neutral_opaque_styling(self):
         missing_gdf = self.gdf.copy()
@@ -293,6 +351,73 @@ class CsaMapRenderTests(unittest.TestCase):
         self.assertIn('"Missing"', rendered)
         self.assertIn('"fillOpacity": 1.0', rendered)
         self.assertIn("_tooltip_class_income", rendered)
+
+
+    def test_active_bin_filter_keeps_matching_features_colored(self):
+        """With active_bin set, matching features keep palette color."""
+        from scripts.csa_map_render import _style_function, CLASS_INDEX
+
+        selected = ("heat", "income")
+        active_bin = ("Low", "High")
+        style_fn = _style_function(selected, active_bin=active_bin)
+
+        feature = {
+            "properties": {"heat_class": "Low", "income_class": "High"}
+        }
+        result = style_fn(feature)
+        palette_color = PAIR_PALETTES[("heat", "income")][
+            CLASS_INDEX["High"]
+        ][CLASS_INDEX["Low"]]
+        self.assertEqual(result["fillColor"], palette_color)
+
+    def test_active_bin_filter_grays_non_matching_features(self):
+        """With active_bin set, non-matching features become gray."""
+        from scripts.csa_map_render import _style_function
+
+        selected = ("heat", "income")
+        active_bin = ("Low", "High")
+        style_fn = _style_function(selected, active_bin=active_bin)
+
+        feature = {
+            "properties": {"heat_class": "High", "income_class": "High"}
+        }
+        result = style_fn(feature)
+        self.assertEqual(result["fillColor"], MISSING_COLOR)
+
+    def test_active_bin_none_preserves_bivariate_colors(self):
+        """Without active_bin, all features keep normal palette color."""
+        from scripts.csa_map_render import _style_function, CLASS_INDEX
+
+        selected = ("heat", "income")
+        style_fn = _style_function(selected, active_bin=None)
+
+        for first_class in ("Low", "Medium", "High"):
+            for second_class in ("Low", "Medium", "High"):
+                feature = {
+                    "properties": {
+                        "heat_class": first_class,
+                        "income_class": second_class,
+                    }
+                }
+                result = style_fn(feature)
+                expected = PAIR_PALETTES[("heat", "income")][
+                    CLASS_INDEX[second_class]
+                ][CLASS_INDEX[first_class]]
+                self.assertEqual(result["fillColor"], expected)
+
+    def test_build_csa_map_accepts_active_bin(self):
+        """build_csa_map should accept active_bin kwarg without error."""
+        map_widget = build_csa_map(
+            self.gdf,
+            ["heat", "income"],
+            self.diagnostics.layer_specs,
+            self.diagnostics.thresholds,
+            tile_url=None,
+            tile_attr=None,
+            active_bin=("Low", "High"),
+        )
+        rendered = map_widget.get_root().render()
+        self.assertIn("Reset to Baltimore", rendered)
 
 
 if __name__ == "__main__":
