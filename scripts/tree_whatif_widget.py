@@ -103,6 +103,10 @@ def whatif_geojson(
     render_gdf = gdf.copy()
     if render_gdf.crs is not None and render_gdf.crs.to_epsg() != 4326:
         render_gdf = render_gdf.to_crs("EPSG:4326")
+    # Shrink the anywidget trait payload; full CSA boundaries are ~2MB raw.
+    render_gdf["geometry"] = render_gdf.geometry.simplify(
+        0.00015, preserve_topology=True
+    )
 
     payload = json.loads(render_gdf.to_json(drop_id=True))
     for feature in payload["features"]:

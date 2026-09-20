@@ -77,6 +77,8 @@ def _():
     render_module = import_module("scripts.csa_map_render")
     whatif_model = import_module("data.what_if_regression")
     whatif_widget = import_module("scripts.tree_whatif_widget")
+    comparison_module = import_module("scripts.csa_comparison")
+    comparison_widget_module = import_module("scripts.csa_map_widget")
     CATEGORY_ORDER = data_module.CATEGORY_ORDER
     CLASS_ORDER = data_module.CLASS_ORDER
     LAYER_SPECS = data_module.LAYER_SPECS
@@ -93,6 +95,8 @@ def _():
     regression_scatter_payload = whatif_model.regression_scatter_payload
     tree_illness_slope = whatif_model.tree_illness_slope
     build_whatif_widget = whatif_widget.build_whatif_widget
+    build_selection_widget = comparison_widget_module.build_selection_widget
+    render_comparison = comparison_module.render_comparison
 
     _ = load_dotenv(Path(__file__).resolve().parent / ".env")
     return (
@@ -104,6 +108,7 @@ def _():
         Path,
         build_csa_map,
         build_legend_html,
+        build_selection_widget,
         build_whatif_widget,
         canonicalize_selection,
         comparison_label,
@@ -114,6 +119,7 @@ def _():
         mo,
         os,
         regression_scatter_payload,
+        render_comparison,
         tree_illness_slope,
     )
 
@@ -574,6 +580,35 @@ def _(
         output = map_layout
     output
     return map_layout
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ## Compare two Community Statistical Areas
+
+    Choose two neighborhoods to compare their heat, health, income,
+    and tree canopy measurements side by side.
+    """)
+    return
+
+
+@app.cell
+def _(build_selection_widget, csa_gdf, mo):
+    comparison_widget = build_selection_widget(csa_gdf)
+    comparison_map = mo.ui.anywidget(comparison_widget)
+    comparison_map
+    return comparison_map, comparison_widget
+
+
+@app.cell
+def _(comparison_map, csa_gdf, mo, render_comparison):
+    selected_regions = list(
+        comparison_map.value.get("selected_ids", [None, None])
+    )
+    comparison_panel = mo.Html(render_comparison(csa_gdf, selected_regions))
+    comparison_panel
+    return comparison_panel, selected_regions
 
 
 @app.cell

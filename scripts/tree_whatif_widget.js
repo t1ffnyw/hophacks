@@ -564,7 +564,18 @@ function render({ model, el }) {
 
   redrawLayer();
   renderControls();
-  requestAnimationFrame(() => map.invalidateSize({ animate: false }));
+
+  // Marimo/anywidget mounts into a shadow root; Leaflet often measures a
+  // zero-size container on first paint. Refresh after layout settles.
+  const refreshSize = () => map.invalidateSize({ animate: false });
+  requestAnimationFrame(refreshSize);
+  setTimeout(refreshSize, 0);
+  setTimeout(refreshSize, 250);
+  if (typeof ResizeObserver !== "undefined") {
+    const frame = el.querySelector(".whatif-map-frame");
+    const observer = new ResizeObserver(() => refreshSize());
+    if (frame) observer.observe(frame);
+  }
 }
 
 export default { render };
