@@ -433,69 +433,6 @@ def build_legend_html(
     specs: Mapping[str, LayerSpec],
     thresholds: Mapping[str, TercileThresholds],
 ) -> str:
-    """Return the HTML card used beside a one- or two-category choropleth."""
-    selected = canonicalize_selection(selected_keys)
-    if len(selected) == 1:
-        return _single_legend(
-            selected[0],
-            specs[selected[0]],
-            thresholds[selected[0]],
-        )
-    return _bivariate_legend(
-        selected[0],
-        selected[1],
-        specs,
-        thresholds,
-    )
-
-
-def fill_color_for_properties(
-    selected_keys: Sequence[str],
-    properties: Mapping[str, object],
-) -> str:
-    """Return the choropleth fill color for one GeoJSON feature."""
-    selected = canonicalize_selection(selected_keys)
-    return str(_style_function(selected)({"properties": dict(properties)})["fillColor"])
-
-
-def build_legend_html(
-    selected_keys: Sequence[str],
-    specs: Mapping[str, LayerSpec],
-    
-    thresholds: Mapping[str, TercileThresholds],
-) -> str:
-    """Return the HTML card used beside a one- or two-category choropleth."""
-    selected = canonicalize_selection(selected_keys)
-    if len(selected) == 1:
-        return _single_legend(
-            selected[0],
-            specs[selected[0]],
-            thresholds[selected[0]],
-        )
-    return _bivariate_legend(
-        selected[0],
-        selected[1],
-        specs,
-        thresholds,
-    )
-
-
-def fill_color_for_properties(
-    selected_keys: Sequence[str],
-    properties: Mapping[str, object],
-) -> str:
-    """Return the choropleth fill color for one GeoJSON feature."""
-    selected = canonicalize_selection(selected_keys)
-    return str(_style_function(selected)({"properties": dict(properties)})["fillColor"])
-
-
-def build_legend_html(
-    selected_keys: Sequence[str],
-    specs: Mapping[str, LayerSpec],
-    thresholds: Mapping[str, TercileThresholds],
-) -> None:
-    legend = build_legend_html(selected_keys, specs, thresholds)
-) -> str:
     """Return standalone legend HTML for the notebook sidebar."""
     selected = canonicalize_selection(selected_keys)
     if len(selected) == 1:
@@ -552,6 +489,15 @@ def build_legend_html(
     </style>
     """
     return css + f"<div class='csa-map-layout'>{legend}</div>"
+
+
+def fill_color_for_properties(
+    selected_keys: Sequence[str],
+    properties: Mapping[str, object],
+) -> str:
+    """Return the choropleth fill color for one GeoJSON feature."""
+    selected = canonicalize_selection(selected_keys)
+    return str(_style_function(selected)({"properties": dict(properties)})["fillColor"])
 
 
 # Match highlight_function so click/keyboard focus outlines the region path

@@ -262,61 +262,28 @@ def _(os):
 def _(
     CLASS_ORDER,
     LAYER_SPECS,
-    MAP_EMBED_HEIGHT,
     PAIR_PALETTES,
     active_bin,
-    basemap_message,
-    build_csa_map,
     build_legend_html,
     canonicalize_selection,
-    category_checks,
     comparison_label,
-    csa_gdf,
     diagnostics,
-    embed_map_html,
     format_bivariate_bin_detail,
-    get_active_bin,
     mo,
     selected_keys,
-    selection_message,
     set_active_bin,
-    tile_attr,
-    tile_url,
     toggle_active_bin,
 ):
-    map_widget = build_csa_map(
-        csa_gdf,
-        selected_keys,
-        LAYER_SPECS,
-        diagnostics.thresholds,
-        tile_url,
-        tile_attr,
-        active_bin=active_bin,
-    )
-    map_output = mo.Html(
-        embed_map_html(map_widget, MAP_EMBED_HEIGHT)
-    ).style({"height": MAP_EMBED_HEIGHT})
-    category_header = mo.Html(
-        "<div style='font-size:18px;font-weight:700;line-height:1.3'>"
-        "Categories \N{EM DASH} select up to two</div>"
-    )
-    checkbox_group = mo.vstack(
-        list(category_checks.values()),
-        align="start",
-        gap=0.25,
-    )
-    category_items = [category_header, checkbox_group]
-    if selection_message:
-        category_items.append(mo.md(selection_message))
-    category_group = mo.vstack(category_items, align="stretch", gap=0.5)
-
+    """Interactive bivariate color grid; kept separate so clicks update state."""
     selected = canonicalize_selection(selected_keys)
+    bin_buttons = {}
     if len(selected) == 2:
         first, second = selected
         palette = PAIR_PALETTES[(first, second)]
         cell_px = 48
         label_font_px = 13
         bin_buttons = {}
+        display_bins = {}
         for second_index in reversed(range(3)):
             for first_index in range(3):
                 first_class = CLASS_ORDER[first_index]
@@ -331,13 +298,20 @@ def _(
                 )
 
                 def _make_handler(ck=cell_key):
-                    def _on_click(_value):
+                    def _on_click(value):
                         set_active_bin(
                             lambda current: toggle_active_bin(current, ck)
                         )
+                        # Marimo expects on_click to return the next button value.
+                        return (value or 0) + 1
+
                     return _on_click
 
-                bin_buttons[cell_key] = mo.ui.button(
+                # Keep the raw button so Marimo registers on_click. Styling the
+                # button itself with .style() turns it into plain Html and drops
+                # the handler (that is why clicks did nothing after the merge).
+                button = mo.ui.button(
+                    value=0,
                     label="\u00a0",
                     on_click=_make_handler(),
                     full_width=True,
@@ -345,7 +319,9 @@ def _(
                         f"{comparison_label(first, LAYER_SPECS)}: {first_class}; "
                         f"{comparison_label(second, LAYER_SPECS)}: {second_class}"
                     ),
-                ).style(
+                )
+                bin_buttons[cell_key] = button
+                display_bins[cell_key] = mo.vstack([button], gap=0).style(
                     {
                         "--csa-bin-color": color,
                         "background": color,
@@ -374,7 +350,7 @@ def _(
             for first_index in range(3):
                 first_class = CLASS_ORDER[first_index]
                 second_class = CLASS_ORDER[second_index]
-                row_cells.append(bin_buttons[(first_class, second_class)])
+                row_cells.append(display_bins[(first_class, second_class)])
             grid_rows.append(
                 mo.hstack(row_cells, gap=0, align="center")
             )
@@ -417,8 +393,6 @@ def _(
             f"{comparison_label(first, LAYER_SPECS)}</div>"
         )
 
-        # Keep Low/Med/High and the x-axis title under the color grid only,
-        # not centered under the whole block (which includes left axis labels).
         grid_and_bottom = mo.vstack(
             [grid_column, col_labels, first_label_html],
             gap=0,
@@ -463,12 +437,14 @@ def _(
                 max-width: none !important;
                 min-height: 100% !important;
                 min-width: 100% !important;
-                opacity: 0 !important;
+                /* Keep clickable; fully transparent still receives events. */
+                opacity: 0.01 !important;
                 padding: 0 !important;
                 position: absolute !important;
                 right: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
+                z-index: 2 !important;
             }
             </style>
             """
@@ -518,7 +494,55 @@ def _(
         )
         legend_region = mo.Html(legend_html)
 
-    legend_region = legend_region.style(
+    # Return buttons so Marimo registers their on_click handlers.
+    return bin_buttons, legend_region
+
+
+@app.cell
+def _(
+    LAYER_SPECS,
+    MAP_EMBED_HEIGHT,
+    active_bin,
+    basemap_message,
+    build_csa_map,
+    category_checks,
+    csa_gdf,
+    diagnostics,
+    embed_map_html,
+    legend_region,
+    mo,
+    selected_keys,
+    selection_message,
+    tile_attr,
+    tile_url,
+):
+    map_widget = build_csa_map(
+        csa_gdf,
+        selected_keys,
+        LAYER_SPECS,
+        diagnostics.thresholds,
+        tile_url,
+        tile_attr,
+        active_bin=active_bin,
+    )
+    map_output = mo.Html(
+        embed_map_html(map_widget, MAP_EMBED_HEIGHT)
+    ).style({"height": MAP_EMBED_HEIGHT})
+    category_header = mo.Html(
+        "<div style='font-size:18px;font-weight:700;line-height:1.3'>"
+        "Categories \N{EM DASH} select up to two</div>"
+    )
+    checkbox_group = mo.vstack(
+        list(category_checks.values()),
+        align="start",
+        gap=0.25,
+    )
+    category_items = [category_header, checkbox_group]
+    if selection_message:
+        category_items.append(mo.md(selection_message))
+    category_group = mo.vstack(category_items, align="stretch", gap=0.5)
+
+    legend_panel = legend_region.style(
         {
             "flex": "1 1 auto",
             "min-height": "0",
@@ -526,7 +550,7 @@ def _(
         }
     )
     sidebar = mo.vstack(
-        [category_group, legend_region],
+        [category_group, legend_panel],
         align="stretch",
         gap=0.5,
     ).style(
@@ -552,7 +576,6 @@ def _(
     return map_layout
 
 
-
 @app.cell
 def _(mo):
     mo.md("""
@@ -570,8 +593,7 @@ def _(
     LAYER_SPECS,
     build_whatif_widget,
     csa_gdf,
-    csa_whatif_stats
-    ,
+    csa_whatif_stats,
     diagnostics,
     mo,
     regression_scatter_payload,
