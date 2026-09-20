@@ -250,10 +250,13 @@ def _(diagnostics, mo):
 @app.cell
 def _(ics, mo):
     mo.md(f"""
-    # Baltimore CSA interactive choropleth
+    ### Explore Baltimore Neighborhoods
 
-    The map uses {ics.joined_count} named Community Statistical
-    Areas.
+    The map shows Baltimore's {ics.joined_count} named Community Statistical
+    Areas. Check one category on the right to see how it varies across the
+    city, or check two to see where they overlap. Hover a neighborhood for
+    its values, and when two categories are selected, click a legend square
+    to highlight matching neighborhoods.
     """)
     return
 
@@ -695,7 +698,7 @@ def _(
 @app.cell
 def _(mo):
     mo.md("""
-    ## Compare two Community Statistical Areas
+    ### Compare Two Community Statistical Areas
 
     Choose two neighborhoods to compare their heat, health, income,
     and tree canopy measurements side by side.
@@ -721,10 +724,26 @@ def _(comparison_map, csa_gdf, mo, render_comparison):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## Insight Synthesis
+
+    1. **Lower-income neighborhoods tend to have fewer trees.**
+
+    2. **Fewer trees tend to mean hotter afternoons.**
+
+    3. **The hotter, less shaded places tend to rank higher for heat-related illnesses.**
+
+    **Putting it all together.** Some neighborhoods are hot, short on trees, low on income, and high on the illness ranking. If shade is added somewhere, these are natural places to look at first.
+    """)
+    return
+
+
 @app.cell
 def _(mo):
     mo.md("""
-    ## Heat-health vulnerability and tree cover
+    ### Heat-Health Vulnerability And Tree Cover
 
     This map always shows heat-health vulnerability with tree cover.
     Click a Community Statistical Area, then use the tree slider to
@@ -765,23 +784,7 @@ def _(
     whatif_explorer
     return
 
-#########
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## Insight Synthesis
- 
-    1. **Lower-income neighborhoods tend to have fewer trees.**
- 
-    2. **Fewer trees tend to mean hotter afternoons.**
- 
-    3. **The hotter, less shaded places tend to rank higher for heat-related illnesses.**
- 
-    **Putting it all together.** Some neighborhoods are hot, short on trees, low on income, and high on the illness ranking. If shade is added somewhere, these are natural places to look at first.
-    """)
-    return
- 
- 
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -841,13 +844,13 @@ def _(mo):
     mo.md(r"""
     ## Reflection
  
-    ### Feedback on marimo
+    ### Feedback On Marimo
  
     **What worked well.** Reactivity was the best part. When a dropdown or slider changes, the map updates with no callback code, which made the what-if tool much easier to build than it would have been in a traditional notebook. Notebooks being plain `.py` files also let us collaborate with git as a team and mirror our GitHub repo in molab for sharing.
  
     **What was hard.** Setting up the environment in VS Code took us a while, and errors in VS Code's notebook view were also confusing, since it wasn't always clear that the problem wasn't our code.
  
-    ### Working with AI tools
+    ### Working With AI Tools
  
     We used Claude to plan the notebook and divide the work, and Grok through Cursor to build many of the visuals, including the map and slider code.
  
