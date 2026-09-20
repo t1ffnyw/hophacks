@@ -61,23 +61,22 @@ LAYER_SPECS: dict[str, LayerSpec] = {
         label="Heat",
         column="temp_af_mean",
         units="°C",
-        period="Modeled afternoon surface (ambient air), approximately 3 PM; 29 August 2018",
+        period="Modeled afternoon surface, approximately 3 PM; 2018 source context",
         hue="red",
        
     ),
     "health": LayerSpec(
         key="health",
-        label="Derived heat-related EMS score",
+        label="Heat-Health Vulnerability",
         column="illness_pctile",
-        units="derived score points (0–100)",
-        period="2020–2022 EMS data; 2024 HHI release; derived CSA mean",
-        caveat="Unweighted mean of ZIP/ZCTA PR_HRI ranks; not a CSA percentile, illness prevalence, or overall HHI.",
+        units="PR_HRI percentile",
+        period="2024 HHI source label; derived CSA approximation",
         hue="purple",
        
     ),
     "income": LayerSpec(
         key="income",
-        label="Median household income",
+        label="Median Household Income",
         column="mhhi23",
         units="USD",
         period="2023 income year",
@@ -85,7 +84,7 @@ LAYER_SPECS: dict[str, LayerSpec] = {
     ),
     "trees": LayerSpec(
         key="trees",
-        label="Tree canopy coverage",
+        label="Tree Canopy Coverage",
         column="trees17",
         units="percent of CSA area",
         period="2017",
@@ -103,7 +102,7 @@ def _require_columns(
 
 
 def _numeric_values(series: pd.Series) -> pd.Series:
-    return pd.to_numeric(series, errors="coerce").replace([np.inf, -np.inf, -999], np.nan)
+    return pd.to_numeric(series, errors="coerce")
 
 
 def _with_empty_classes(

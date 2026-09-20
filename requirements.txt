@@ -10,3 +10,4 @@ mapclassify
 python-dotenv
 anywidget
 traitlets
+statsmodels

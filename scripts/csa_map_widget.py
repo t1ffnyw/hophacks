@@ -7,11 +7,17 @@ from pathlib import Path
 import anywidget
 import folium
 import traitlets
-from branca.element import MacroElement, Template
+from branca.element import Element, MacroElement, Template
 
 from scripts.csa_comparison import COLORS, number, exact
 from scripts.csa_map_data import CATEGORY_ORDER
-from scripts.csa_map_render import build_csa_map, _style_function, _single_legend, _bivariate_legend
+from scripts.csa_map_render import (
+    build_csa_map,
+    build_legend_html,
+    _style_function,
+    _single_legend,
+    _bivariate_legend,
+)
 
 
 class ComparisonMap(anywidget.AnyWidget):
@@ -56,6 +62,11 @@ def mode_payload(gdf, specs, thresholds):
 
 def build_comparison_widget(gdf, specs, thresholds, tile_url=None, tile_attr=None):
     map_object = build_csa_map(gdf, ['heat'], specs, thresholds, tile_url, tile_attr)
+    # Main's choropleth keeps the legend in the Marimo sidebar; the comparison
+    # iframe still needs a .csa-map-layout host so mode switches can update it.
+    map_object.get_root().html.add_child(
+        Element(build_legend_html(['heat'], specs, thresholds))
+    )
     geo = next(child for child in map_object._children.values() if isinstance(child, folium.GeoJson))
     bridge = MacroElement()
     bridge.map_name, bridge.geo_name = map_object.get_name(), geo.get_name()
@@ -95,3 +106,11 @@ def build_comparison_widget(gdf, specs, thresholds, tile_url=None, tile_attr=Non
     {% endmacro %}''')
     map_object.add_child(bridge)
     return ComparisonMap(region_names=sorted(gdf.Community.tolist()), map_html=map_object.get_root().render())
+
+
+def build_selection_widget(gdf):
+    """A/B neighborhood selectors without the Folium comparison map."""
+    return ComparisonMap(
+        region_names=sorted(gdf.Community.astype(str).str.strip().tolist()),
+        map_html="",
+    )

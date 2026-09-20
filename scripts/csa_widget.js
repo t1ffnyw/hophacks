@@ -19,12 +19,20 @@ function render({model, el}) {
     button.addEventListener('click', () => act({type:i === 0 ? 'clear' : 'swap'})); controls.append(button);
   });
   const status = document.createElement('p'); status.className = 'selection-status'; status.setAttribute('role','status');
-  const frame = document.createElement('iframe'); frame.title = 'Interactive Baltimore Community Statistical Areas map';
-  frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
-  frame.srcdoc = model.get('map_html');
-  el.append(style, frame, controls, status);
+  const mapHtml = model.get('map_html') || '';
+  let frame = null;
+  if (mapHtml) {
+    frame = document.createElement('iframe');
+    frame.title = 'Interactive Baltimore Community Statistical Areas map';
+    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    frame.srcdoc = mapHtml;
+    el.append(style, frame, controls, status);
+  } else {
+    el.append(style, controls, status);
+  }
   function send() {
-    frame.contentWindow?.postMessage({channel:'csa-comparison', type:'update', selected:model.get('selected_ids'), mode:model.get('mode')}, '*');
+    if (!frame?.contentWindow) return;
+    frame.contentWindow.postMessage({channel:'csa-comparison', type:'update', selected:model.get('selected_ids'), mode:model.get('mode')}, '*');
   }
   function sync() {
     const selected = model.get('selected_ids');
@@ -40,13 +48,15 @@ function render({model, el}) {
     model.set('selected_ids', result.selected); model.save_changes(); sync();
   }
   function message(event) {
-    if (event.source !== frame.contentWindow || event.data?.channel !== 'csa-comparison') return;
+    if (!frame || event.source !== frame.contentWindow || event.data?.channel !== 'csa-comparison') return;
     if (event.data.type === 'ready') send();
     if (event.data.type === 'click') act({type:'click', id:event.data.id});
   }
   window.addEventListener('message', message);
   model.on('change:selected_ids', sync); model.on('change:mode', send);
-  status.textContent = 'Click a region for A, then a different region for B. Use either dropdown to replace a neighborhood, or click a selected region to deselect it.';
+  status.textContent = mapHtml
+    ? 'Click a region for A, then a different region for B. Use either dropdown to replace a neighborhood, or click a selected region to deselect it.'
+    : 'Choose Neighborhood A and Neighborhood B from the dropdowns to compare them.';
   sync();
   return () => { window.removeEventListener('message', message); model.off('change:selected_ids', sync); model.off('change:mode', send); };
 }

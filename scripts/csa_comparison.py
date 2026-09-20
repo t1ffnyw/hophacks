@@ -12,7 +12,7 @@ FIELDS = (
     ('trees17', 'Tree canopy', '% of area', '2017'),
     ('temp_af_mean', 'Modeled afternoon temperature', '°C', '29 August 2018 · approximately 3 PM'),
     ('mhhi23', 'Median household income', 'USD', '2023'),
-    ('illness_pctile', 'Heat-related EMS score', 'score points / 100', '2020–2022 · HHI 2024 release'),
+    ('illness_pctile', 'Heat-health index', 'index points / 100', '2020–2022 · HHI 2024 release'),
 )
 CAUSAL_NOTE = ('These comparisons describe area-level associations; they do not establish that '
                'differences in tree canopy caused differences in health.')
@@ -57,7 +57,7 @@ def display_measure(value, field):
 
 HOVER_LABELS = {
     'temp_af_mean': 'Temperature',
-    'illness_pctile': 'EMS score',
+    'illness_pctile': 'Heat-health index',
     'mhhi23': 'Income',
     'trees17': 'Canopy',
 }
@@ -105,9 +105,9 @@ def differences(a, b):
 # pairwise normalization or conversion from the overall HHI's 0–1 ranks.
 HEALTH_MAX = 100
 HALO_DESCRIPTION = (
-    'Halo fill equals 100 minus the derived EMS score. It does not represent '
+    'Halo fill equals 100 minus the heat-health index. It does not represent '
     'the percentage of residents who are healthy. '
-    'Area-level derived score: the unweighted mean of available ZIP/ZCTA '
+    'Area-level derived index: the unweighted mean of available ZIP/ZCTA '
     'heat-related EMS percentile ranks, on the stored 0–100 scale. '
     'It is not a national CSA percentile, an individual’s health, or the '
     'percentage of people who are sick. Source values could not be independently '
@@ -118,7 +118,7 @@ HALO_DESCRIPTION = (
 def health_halo(health):
     """Invert only the visual fill on the fixed 0–100 stored score scale."""
     if health is not None and (not math.isfinite(health) or not 0 <= health <= HEALTH_MAX):
-        raise ValueError('EMS score must be finite and between 0 and 100')
+        raise ValueError('Heat-health index must be finite and between 0 and 100')
     arcs = []
     for i in range(20):
         start = math.radians(-90 + i * 18)
@@ -153,7 +153,7 @@ def profile(row, slot):
         except ValueError:
             invalid_health = True
         if invalid_health:
-            health_warning = 'Invalid EMS score: expected a finite value from 0 to 100.'
+            health_warning = 'Invalid heat-health index: expected a finite value from 0 to 100.'
     height = 0 if heat is None else 110 * min(1, max(0, (heat - HEAT_MIN) / (HEAT_MAX - HEAT_MIN)))
     dots = ''.join(f'<circle cx="{72 + (i % 10) * 16}" cy="{190 + (i // 10) * 12}" r="4" fill="{ "#24854b" if canopy is not None and i < math.floor(canopy + .5) else "#dce2e6"}"/>' for i in range(100))
     bills = ''
@@ -164,7 +164,7 @@ def profile(row, slot):
     heat_value = display_measure(heat, 'temp_af_mean')
     income_value = display_measure(income, 'mhhi23')
     canopy_value = display_measure(canopy, 'trees17')
-    health_value = 'Invalid EMS score' if health_warning else display_measure(health, 'illness_pctile')
+    health_value = 'Invalid heat-health index' if health_warning else display_measure(health, 'illness_pctile')
     heat_tip = hover_caption(heat, 'temp_af_mean')
     income_tip = hover_caption(income, 'mhhi23')
     canopy_tip = hover_caption(canopy, 'trees17')
@@ -182,7 +182,7 @@ def profile(row, slot):
       <rect x="112" y="73" width="13" height="56" rx="6"/><rect x="175" y="73" width="13" height="56" rx="6"/>
       <rect x="128" y="110" width="18" height="54" rx="7"/><rect x="154" y="110" width="18" height="54" rx="7"/></g>
       <rect x="100" y="0" width="110" height="185" fill="transparent"/>
-      {speech_bubble('EMS score', health_value, 8, 8, 112, 50, 'right')}</g>
+      {speech_bubble('Heat-health index', health_value, 8, 8, 148, 50, 'right')}</g>
       <g class="hotspot"><title>{escape(income_tip)}</title>{bills}
       <rect x="210" y="0" width="100" height="185" fill="transparent"/>
       {speech_bubble('Income', income_value, 78, 70, 132, 52, 'right')}</g>
@@ -194,7 +194,7 @@ def profile(row, slot):
 
 def comparison_text(a, b):
     diffs = differences(a, b)
-    units = ['percentage points', '°C', 'USD', 'score points']
+    units = ['percentage points', '°C', 'USD', 'index points']
     lines, pattern = [], []
     for (field, label, _, _), unit in zip(FIELDS, units):
         delta = diffs[field]
@@ -215,7 +215,7 @@ def comparison_text(a, b):
 
 STORY_MEASURES = (
     ('temp_af_mean', '°C', 'temp', 'lower', 'higher'),
-    ('illness_pctile', '', 'burden score', 'lower', 'higher'),
+    ('illness_pctile', '', 'heat-health index', 'lower', 'higher'),
     ('mhhi23', '$', 'income', 'less', 'more'),
     ('trees17', '%', 'canopy', 'less', 'more'),
 )
@@ -268,16 +268,6 @@ def comparison_story(a, b):
     )
 
 
-METHODS = '''<details><summary>Sources, years, and methods</summary>
-<p>Neighborhoods here are whole Community Statistical Areas (CSAs), matched by Community / csa2010. Values come from data/csa_combined_heat_income_trees_illness.csv.</p>
-<p>Canopy: trees17, percent of CSA area in 2017. Income: mhhi23, 2023 median household income in dollars. Both are joined using the original CSA tables; income is an estimate, not total wealth. Exact stored numeric values are shown; their digits do not imply measurement precision.</p>
-<p>Temperature: temp_af_mean, the zonal mean of bal_af.tif. The local Baltimore readme identifies modeled ambient air temperature at approximately 3 PM (Figure 3C), not satellite land-surface temperature. <a href="https://doi.org/10.3390/cli7010005" target="_blank" rel="noopener">Shandas et al. (2019)</a> documents the 29 August 2018 campaign and Celsius units (Table 1). This is a historical modeled snapshot, not current weather or an annual average.</p>
-<p>Health: illness_pctile is generated by data/heat_illness_data.py: replace -999 with missing, join xwalk_zip2csa.csv ZIP codes to ZCTA, then take the unweighted arithmetic mean of available PR_HRI values per CSA. There is no population or overlap-area weighting and no re-ranking. ZIP and ZCTA boundaries are not interchangeable; the crosswalk is an approximation.</p>
-<p>The <a href="https://www.atsdr.cdc.gov/place-health/media/pdfs/2024/07/HHI-2024-Release-Technical-Documentation-508.pdf" target="_blank" rel="noopener">CDC/ATSDR 2024 technical documentation (pages 10, 14, 25)</a> defines PR_HRI as a percentile rank of 2020–2022 heat-related EMS activation rates. Our CSA mean is displayed as a derived 0–100 score with score-point differences, not an illness rate or overall HHI rank. Higher scores indicate higher source ranks, not a percentage above average.</p>
-<p>Provenance limitation: the bundled national HHI workbook is unreadable as an Excel ZIP archive, so the supplied CSA values could not be independently regenerated from it. Crosswalk weighting, source reporting completeness and LOW_EMS flags are not retained in the combined table.</p>
-<p>Missing, nonfinite, sentinel and invalid percentage/score values are shown as Data unavailable. Comparisons use A minus B, with no causal inference; the measurement years differ.</p></details>'''
-
-
 def render_comparison(gdf, selected):
     selected = list(selected or [None, None])
     rows = [None, None]
@@ -292,5 +282,5 @@ def render_comparison(gdf, selected):
                   if all(row is None for row in rows) else
                   'One region selected. Choose a second region to see differences.')
         third = f'<article class="story"><h3>Choose two neighborhoods</h3><p class="placeholder">{prompt}</p></article>'
-    css = '''<style>.csa-comparison{font:14px/1.5 system-ui;color:#243342}.csa-comparison .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.csa-comparison article{border:1px solid #d6dde3;border-radius:14px;padding:18px;background:#fff;min-width:0;overflow:visible;overflow-wrap:anywhere}.csa-comparison h3{font-size:18px;min-height:54px;margin:10px 0}.csa-comparison svg{width:100%;max-height:338px;overflow:visible}.csa-comparison .hotspot{cursor:pointer}.csa-comparison .hotspot .bubble{opacity:0;pointer-events:none}.csa-comparison .hotspot:hover .bubble{opacity:1}.csa-comparison .health-halo path{fill:none;stroke-width:4;stroke-linecap:butt}.csa-comparison .halo-track{stroke:#e0e5e9}.csa-comparison .halo-fill{stroke:#d9b526;animation:csa-halo-enter 220ms ease-out}.csa-comparison .halo-missing .halo-track{stroke:#aeb7c0;stroke-dasharray:2 2}.csa-comparison .badge{color:white;border-radius:50%;padding:5px 11px;font-weight:700}.csa-comparison .key{font-size:12px;color:#52616f}.csa-comparison details{margin-top:18px}.csa-comparison summary{cursor:pointer}.csa-comparison .story{display:flex;flex-direction:column;justify-content:center}.csa-comparison .story h3,.csa-comparison .story .than{color:#243342;font-size:22px;font-weight:600;text-align:center;min-height:0;margin:10px 4px}.csa-comparison .story .name-a{color:#0072B2}.csa-comparison .story .name-b{color:#D55E00}.csa-comparison .story .placeholder{text-align:center}.csa-comparison .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:8px 0 12px}.csa-comparison .diff-box{border:2.5px solid #0072B2;color:#243342;padding:16px 10px;min-height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#fff}.csa-comparison .diff-box:nth-child(1){border-radius:18px 14px 16px 12px}.csa-comparison .diff-box:nth-child(2){border-radius:12px 22px 10px 18px}.csa-comparison .diff-box:nth-child(3){border-radius:16px 10px 20px 14px}.csa-comparison .diff-box:nth-child(4){border-radius:10px 16px 22px 12px}.csa-comparison .diff-box .amount{font-size:20px;font-weight:700;margin:0 0 8px}.csa-comparison .diff-box .phrase{font-size:16px;line-height:1.2}@keyframes csa-halo-enter{from{opacity:.25}to{opacity:1}}@media(prefers-reduced-motion:reduce){.csa-comparison .halo-fill{animation:none}}@media(max-width:850px){.csa-comparison .cards{grid-template-columns:1fr}}</style>'''
-    return f'<section class="csa-comparison" aria-label="Neighborhood comparison">{css}<div class="cards">{profile(rows[0],0)}{profile(rows[1],1)}{third}</div>{METHODS}</section>'
+    css = '''<style>.csa-comparison{font:14px/1.5 system-ui;color:#243342}.csa-comparison .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.csa-comparison article{border:1px solid #d6dde3;border-radius:14px;padding:18px;background:#fff;min-width:0;overflow:visible;overflow-wrap:anywhere}.csa-comparison h3{font-size:18px;min-height:54px;margin:10px 0}.csa-comparison svg{width:100%;max-height:338px;overflow:visible}.csa-comparison .hotspot{cursor:pointer}.csa-comparison .hotspot .bubble{opacity:0;pointer-events:none}.csa-comparison .hotspot:hover .bubble{opacity:1}.csa-comparison .health-halo path{fill:none;stroke-width:4;stroke-linecap:butt}.csa-comparison .halo-track{stroke:#e0e5e9}.csa-comparison .halo-fill{stroke:#d9b526;animation:csa-halo-enter 220ms ease-out}.csa-comparison .halo-missing .halo-track{stroke:#aeb7c0;stroke-dasharray:2 2}.csa-comparison .badge{color:white;border-radius:50%;padding:5px 11px;font-weight:700}.csa-comparison .key{font-size:12px;color:#52616f}.csa-comparison .story{display:flex;flex-direction:column;justify-content:center}.csa-comparison .story h3,.csa-comparison .story .than{color:#243342;font-size:22px;font-weight:600;text-align:center;min-height:0;margin:10px 4px}.csa-comparison .story .name-a{color:#0072B2}.csa-comparison .story .name-b{color:#D55E00}.csa-comparison .story .placeholder{text-align:center}.csa-comparison .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:8px 0 12px}.csa-comparison .diff-box{border:2.5px solid #0072B2;color:#243342;padding:16px 10px;min-height:118px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#fff}.csa-comparison .diff-box:nth-child(1){border-radius:18px 14px 16px 12px}.csa-comparison .diff-box:nth-child(2){border-radius:12px 22px 10px 18px}.csa-comparison .diff-box:nth-child(3){border-radius:16px 10px 20px 14px}.csa-comparison .diff-box:nth-child(4){border-radius:10px 16px 22px 12px}.csa-comparison .diff-box .amount{font-size:20px;font-weight:700;margin:0 0 8px}.csa-comparison .diff-box .phrase{font-size:16px;line-height:1.2}@keyframes csa-halo-enter{from{opacity:.25}to{opacity:1}}@media(prefers-reduced-motion:reduce){.csa-comparison .halo-fill{animation:none}}@media(max-width:850px){.csa-comparison .cards{grid-template-columns:1fr}}</style>'''
+    return f'<section class="csa-comparison" aria-label="Neighborhood comparison">{css}<div class="cards">{profile(rows[0],0)}{profile(rows[1],1)}{third}</div></section>'
