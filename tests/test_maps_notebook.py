@@ -174,6 +174,8 @@ class MapsNotebookTests(unittest.TestCase):
         self.assertIsNone(clear(("heat",), ("Low", "High")))
         self.assertIsNone(clear(("heat",), None))
         self.assertEqual(clear(("heat", "income"), ("Low", "High")), ("Low", "High"))
+        self.assertEqual(definitions["vulnerability_tree_keys"], ("health", "trees"))
+        self.assertIsNotNone(definitions["whatif_explorer"])
 
 
 if __name__ == "__main__":
