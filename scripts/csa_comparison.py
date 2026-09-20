@@ -12,7 +12,7 @@ FIELDS = (
     ('trees17', 'Tree canopy', '% of area', '2017'),
     ('temp_af_mean', 'Modeled afternoon temperature', '°C', '29 August 2018 · approximately 3 PM'),
     ('mhhi23', 'Median household income', 'USD', '2023'),
-    ('illness_pctile', 'Heat-health index', 'index points / 100', '2020–2022 · HHI 2024 release'),
+    ('illness_pctile', 'Heat-Health vulnerability', 'index points / 100', '2020–2022 · HHI 2024 release'),
 )
 CAUSAL_NOTE = ('These comparisons describe area-level associations; they do not establish that '
                'differences in tree canopy caused differences in health.')
@@ -57,7 +57,7 @@ def display_measure(value, field):
 
 HOVER_LABELS = {
     'temp_af_mean': 'Temperature',
-    'illness_pctile': 'Heat-health index',
+    'illness_pctile': 'Heat-Health vulnerability',
     'mhhi23': 'Income',
     'trees17': 'Canopy',
 }
@@ -105,7 +105,7 @@ def differences(a, b):
 # pairwise normalization or conversion from the overall HHI's 0–1 ranks.
 HEALTH_MAX = 100
 HALO_DESCRIPTION = (
-    'Halo fill equals 100 minus the heat-health index. It does not represent '
+    'Halo fill equals 100 minus the Heat-Health vulnerability. It does not represent '
     'the percentage of residents who are healthy. '
     'Area-level derived index: the unweighted mean of available ZIP/ZCTA '
     'heat-related EMS percentile ranks, on the stored 0–100 scale. '
@@ -118,7 +118,7 @@ HALO_DESCRIPTION = (
 def health_halo(health):
     """Invert only the visual fill on the fixed 0–100 stored score scale."""
     if health is not None and (not math.isfinite(health) or not 0 <= health <= HEALTH_MAX):
-        raise ValueError('Heat-health index must be finite and between 0 and 100')
+        raise ValueError('Heat-Health vulnerability must be finite and between 0 and 100')
     arcs = []
     for i in range(20):
         start = math.radians(-90 + i * 18)
@@ -153,7 +153,7 @@ def profile(row, slot):
         except ValueError:
             invalid_health = True
         if invalid_health:
-            health_warning = 'Invalid heat-health index: expected a finite value from 0 to 100.'
+            health_warning = 'Invalid Heat-Health vulnerability: expected a finite value from 0 to 100.'
     height = 0 if heat is None else 110 * min(1, max(0, (heat - HEAT_MIN) / (HEAT_MAX - HEAT_MIN)))
     dots = ''.join(f'<circle cx="{72 + (i % 10) * 16}" cy="{190 + (i // 10) * 12}" r="4" fill="{ "#24854b" if canopy is not None and i < math.floor(canopy + .5) else "#dce2e6"}"/>' for i in range(100))
     bills = ''
@@ -164,7 +164,7 @@ def profile(row, slot):
     heat_value = display_measure(heat, 'temp_af_mean')
     income_value = display_measure(income, 'mhhi23')
     canopy_value = display_measure(canopy, 'trees17')
-    health_value = 'Invalid heat-health index' if health_warning else display_measure(health, 'illness_pctile')
+    health_value = 'Invalid Heat-Health vulnerability' if health_warning else display_measure(health, 'illness_pctile')
     heat_tip = hover_caption(heat, 'temp_af_mean')
     income_tip = hover_caption(income, 'mhhi23')
     canopy_tip = hover_caption(canopy, 'trees17')
@@ -182,7 +182,7 @@ def profile(row, slot):
       <rect x="112" y="73" width="13" height="56" rx="6"/><rect x="175" y="73" width="13" height="56" rx="6"/>
       <rect x="128" y="110" width="18" height="54" rx="7"/><rect x="154" y="110" width="18" height="54" rx="7"/></g>
       <rect x="100" y="0" width="110" height="185" fill="transparent"/>
-      {speech_bubble('Heat-health index', health_value, 8, 8, 148, 50, 'right')}</g>
+      {speech_bubble('Heat-Health vulnerability', health_value, 8, 8, 148, 50, 'right')}</g>
       <g class="hotspot"><title>{escape(income_tip)}</title>{bills}
       <rect x="210" y="0" width="100" height="185" fill="transparent"/>
       {speech_bubble('Income', income_value, 78, 70, 132, 52, 'right')}</g>
@@ -215,7 +215,7 @@ def comparison_text(a, b):
 
 STORY_MEASURES = (
     ('temp_af_mean', '°C', 'temp', 'lower', 'higher'),
-    ('illness_pctile', '', 'heat-health index', 'lower', 'higher'),
+    ('illness_pctile', '', 'Heat-Health vulnerability', 'lower', 'higher'),
     ('mhhi23', '$', 'income', 'less', 'more'),
     ('trees17', '%', 'canopy', 'less', 'more'),
 )
