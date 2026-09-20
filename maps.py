@@ -143,7 +143,7 @@ def _(data_dir, load_csa_map_data):
 def _(Path, mo):
     mo.center(
         mo.image(
-            src=Path(__file__).resolve().parent / "images" / "logo.png",
+            "https://raw.githubusercontent.com/t1ffnyw/hophacks/main/images/logo.png",
             alt="the cost of no shade",
             width=560,
         )
