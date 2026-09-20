@@ -78,6 +78,7 @@ def _():
     whatif_widget = import_module("scripts.tree_whatif_widget")
     comparison_module = import_module("scripts.csa_comparison")
     comparison_widget_module = import_module("scripts.csa_map_widget")
+    donate_widget_module = import_module("scripts.tree_donate_widget")
     CATEGORY_ORDER = data_module.CATEGORY_ORDER
     CLASS_ORDER = data_module.CLASS_ORDER
     LAYER_SPECS = data_module.LAYER_SPECS
@@ -95,6 +96,7 @@ def _():
     tree_illness_slope = whatif_model.tree_illness_slope
     build_whatif_widget = whatif_widget.build_whatif_widget
     build_selection_widget = comparison_widget_module.build_selection_widget
+    build_tree_donate_widget = donate_widget_module.build_tree_donate_widget
     render_comparison = comparison_module.render_comparison
 
     _ = load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -108,6 +110,7 @@ def _():
         build_csa_map,
         build_legend_html,
         build_selection_widget,
+        build_tree_donate_widget,
         build_whatif_widget,
         canonicalize_selection,
         comparison_label,
@@ -790,8 +793,37 @@ def _(mo):
     Trees are one tool among many, but they matter for health as well as comfort. Shade and cooler air can lower the heat people are exposed to, and heat is hardest on those with heart, kidney, and lung conditions. Cooling centers, help paying for air conditioning, and outreach to older and isolated neighbors matter too. But whether there's shade on your block shouldn't depend on where you live.
     """)
     return
- 
- 
+
+
+@app.cell(hide_code=True)
+def _(build_tree_donate_widget, mo):
+    tree_donate = mo.ui.anywidget(build_tree_donate_widget())
+    treebaltimore_blurb = mo.md(
+        """
+        ### About TreeBaltimore
+
+        The TreeBaltimore partnership, housed within the Baltimore City Department of
+        Recreation and Parks’ Forestry Division, is a citywide coalition of nonprofits,
+        city agencies, community groups and individuals working together to grow a
+        healthy tree canopy for all residents to enjoy.
+
+        It takes a community of people to grow a community of trees! 
+        Your donation will increase our capacity to plant​, care for, and protect our tree canopy.  
+        
+        Support our future urban forest today by making a donation or by volunteering. 
+        More information at treebaltimore.org
+
+        """
+    )
+    mo.hstack(
+        [tree_donate, treebaltimore_blurb],
+        widths=[1, 1.4],
+        gap=1.5,
+        align="center",
+    )
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -814,7 +846,7 @@ def _(mo):
     **What we learned about prompting.** Specific prompts worked much better than vague ones. Our habits were to ask for one change at a time, state marimo's rules up front, check every result against our real data, and paste the exact error message when something broke. The tools were fast at drafts, but knowing our data and catching mistakes stayed our job.
     """)
     return
-#######
+
 
 if __name__ == "__main__":
     app.run()
