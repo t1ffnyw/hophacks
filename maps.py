@@ -140,6 +140,18 @@ def _(data_dir, load_csa_map_data):
 
 ##########
 @app.cell(hide_code=True)
+def _(Path, mo):
+    mo.center(
+        mo.image(
+            src=Path(__file__).resolve().parent / "images" / "logo.png",
+            alt="the cost of no shade",
+            width=560,
+        )
+    )
+    return
+
+
+@app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
     ## Executive Summary
