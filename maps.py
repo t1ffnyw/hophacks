@@ -150,6 +150,39 @@ def _(mo):
     """)
     return
 
+
+@app.cell(hide_code=True)
+def _(Path, mo):
+    images_dir = Path(__file__).resolve().parent / "images"
+    roland_park = mo.image(
+        src=images_dir / "roland_park.jpg",
+        alt="Tree-lined residential street in Roland Park",
+        width="100%",
+        rounded=True,
+        caption=(
+            "Roland Park — a leafy north Baltimore neighborhood where mature "
+            "street trees and large lots cast deep shade on quiet residential streets."
+        ),
+    )
+    madison_eastend = mo.image(
+        src=images_dir / "madison_eastend.jpg",
+        alt="Rowhouses along a street in Madison Eastend",
+        width="100%",
+        rounded=True,
+        caption=(
+            "Madison Eastend — a denser east Baltimore rowhouse corridor, where "
+            "hardscape dominates and tree canopy is far thinner than in Roland Park."
+        ),
+    )
+    mo.hstack(
+        [roland_park, madison_eastend],
+        widths="equal",
+        gap=1.25,
+        align="start",
+    )
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
