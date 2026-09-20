@@ -166,10 +166,10 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(Path, mo):
+def _(mo):
     images_dir = Path(__file__).resolve().parent / "images"
     roland_park = mo.image(
-        src=images_dir / "roland_park.jpg",
+        src="https://raw.githubusercontent.com/t1ffnyw/hophacks/main/images/roland_park.jpg",
         alt="Tree-lined residential street in Roland Park",
         width="100%",
         rounded=True,
@@ -179,7 +179,7 @@ def _(Path, mo):
         ),
     )
     madison_eastend = mo.image(
-        src=images_dir / "madison_eastend.jpg",
+        src="https://raw.githubusercontent.com/t1ffnyw/hophacks/main/images/madison_eastend.jpg",
         alt="Rowhouses along a street in Madison Eastend",
         width="100%",
         rounded=True,
