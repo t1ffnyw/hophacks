@@ -1,3 +1,5 @@
+# The Cost of No Shade 🌳 🌳 🌳
+
 **Executive Summary**
 
 Imagine it's 100 degrees outside. Is there shade on your block? A working air conditioner? Somewhere cooler to go? In Baltimore, the answers depend on where you live. Across the city, the neighborhoods that heat up the most tend to be the ones with the fewest trees and the lowest household incomes, and they tend to rank higher for heat-related illness too. Same city, same afternoon, very different experiences.
@@ -25,5 +27,5 @@ On the visualization side, the entire interactive experience runs inside marimo,
 Our underlying data was pulled from several sources: CSA boundaries, tree cover, and median household income all come from Baltimore's Open Data Portal (data.baltimorecity.gov); modeled afternoon temperature by CSA comes from OSF; and heat-related illness percentiles by ZIP code come from ATSDR's Heat & Health Index. Since that last dataset is reported by ZIP code rather than CSA, we used a ZIP-to-CSA crosswalk table from the mapbaltimore R package to reconcile its geography with the rest of our data before merging everything together.
 
 **Goal**
-Tree cover is often talked about as an environmental amenity — but our data shows it's a public health variable with real, measurable stakes. Our aim is to bring attention to this often unthought-of consequence of a lack of tree cover, and to advocate for more tree planting in low-income, heat-stressed neighborhoods across Baltimore. 🌳🌳🌳
+Tree cover is often talked about as an environmental amenity — but our data shows it's a public health variable with real, measurable stakes. Our aim is to bring attention to this often unthought-of consequence of a lack of tree cover, and to advocate for more tree planting in low-income, heat-stressed neighborhoods across Baltimore. 
 
