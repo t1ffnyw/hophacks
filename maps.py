@@ -140,7 +140,7 @@ def _(data_dir, load_csa_map_data):
 
 ##########
 @app.cell(hide_code=True)
-def _(Path, mo):
+def _(mo):
     mo.center(
         mo.image(
             "https://raw.githubusercontent.com/t1ffnyw/hophacks/main/images/logo.png",
