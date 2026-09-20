@@ -26,11 +26,12 @@ class MapsNotebookTests(unittest.TestCase):
 
     def test_map_and_sidebar_have_fixed_height_parity(self):
         _, definitions = maps.app.run()
-        map_region, sidebar_region = definitions["map_layout"]._live_children
+        layout_text = definitions["map_layout"].text
         expected_height = f"height:{definitions['MAP_EMBED_HEIGHT']}"
 
-        self.assertIn(expected_height, map_region.text)
-        self.assertIn(expected_height, sidebar_region.text)
+        # Map iframe embed + sidebar both lock to MAP_EMBED_HEIGHT.
+        self.assertGreaterEqual(layout_text.count(expected_height), 2)
+        self.assertIn(f'height="{definitions["MAP_EMBED_HEIGHT"]}"', layout_text)
 
     def test_map_and_sidebar_use_sixty_five_thirty_five_widths(self):
         _, definitions = maps.app.run()

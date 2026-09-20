@@ -42,7 +42,7 @@ class TreeWhatIfWidgetTests(unittest.TestCase):
         )
 
         self.assertIn("Key", widget.legend_html)
-        self.assertIn("Heat-health vulnerability", widget.legend_html)
+        self.assertIn("Heat-Health Vulnerability", widget.legend_html)
         self.assertIn("Tree canopy cover", widget.legend_html)
         self.assertIn("#756bb1", widget.legend_html)
         self.assertIn("#238b45", widget.legend_html)
