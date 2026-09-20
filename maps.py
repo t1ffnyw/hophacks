@@ -359,7 +359,7 @@ def _(
 
 @app.cell
 def _(os):
-    carto_key = os.getenv("CARTODB_API_KEY") or os.getenv("CARTO_KEY")
+    carto_key = cb1_3qsr_1_fdf71e08248ac3ba866c246f
     if carto_key:
         tile_url = (
             "https://{s}.basemaps.cartocdn.com/"
