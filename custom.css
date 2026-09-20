@@ -1,0 +1,10 @@
+.markdown .paragraph,
+.markdown li,
+.markdown td,
+.markdown th {
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+.markdown h2 { font-size: 2rem; }
+.markdown h3 { font-size: 2rem; }
